@@ -1,0 +1,17 @@
+# Binaries
+sentinel
+sentinel.exe
+dist/
+
+# Test and coverage artifacts
+coverage.out
+*.test
+
+# Editor cruft
+.idea/
+.vscode/
+*.swp
+
+# OS cruft
+.DS_Store
+Thumbs.db
