@@ -1,0 +1,21 @@
+# Sentinel per-repository configuration.
+# Copy to .sentinel.yaml in the root of the repo you scan.
+# Precedence: CLI flags > SENTINEL_* env vars > this file > defaults.
+#
+# The API key is NEVER read from this file — export ANTHROPIC_API_KEY instead.
+
+format: terminal        # terminal | markdown | json | sarif
+severity: low           # minimum severity to report: low | medium | high | critical
+concurrency: 4          # concurrent analysis requests
+model: claude-sonnet-4-5
+
+# Optional glob filters (doublestar syntax, matched against relative paths):
+# include:
+#   - "**/*.go"
+#   - "**/*.ts"
+# exclude:
+#   - "**/generated/**"
+#   - "**/*_test.go"
+
+# Write the report to a file instead of stdout:
+# out: sentinel-report.md
