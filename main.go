@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -25,8 +26,18 @@ import (
 	"github.com/acevenen/sentinel/internal/scanner"
 )
 
-// version is stamped by the release workflow via -ldflags.
+// version is stamped by the release workflow via -ldflags. For go-install
+// builds it falls back to the module version from the build info.
 var version = "dev"
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		version = bi.Main.Version
+	}
+}
 
 // errFindings signals exit code 1: the scan worked but found issues.
 var errFindings = errors.New("findings at or above severity threshold")
