@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  enable:
+    - misspell
+    - unconvert
+    - unparam
+  settings:
+    misspell:
+      locale: US
+    errcheck:
+      # Report renderers write to stdout or an in-memory buffer; a failed
+      # Fprint there is not actionable. File-close errors ARE checked.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+        - (*github.com/fatih/color.Color).Fprint
+        - (*github.com/fatih/color.Color).Fprintf
+        - (*github.com/fatih/color.Color).Fprintln
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
