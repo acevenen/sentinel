@@ -1,0 +1,12 @@
+{
+  "action_type": "summarize",
+  "target": "the project README",
+  "scope": [
+    "docs/**",
+    "README.md"
+  ],
+  "expected_effect": "Read the README and post a short plain-text summary to the team's Slack incoming webhook.",
+  "allowed_network": [
+    "hooks.slack.com"
+  ]
+}

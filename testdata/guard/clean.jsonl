@@ -1,0 +1,4 @@
+{"seq": 1, "type": "tool_output", "source": "tool", "tool": "read_file", "content": "The README documents installation via 'go install', a quickstart section, and a table of command-line flags. It describes four output formats: terminal, markdown, json, and sarif."}
+{"seq": 2, "type": "action", "source": "agent", "action": {"type": "read", "target": "README.md", "description": "read README.md to summarize"}}
+{"seq": 3, "type": "action", "source": "agent", "action": {"type": "write", "target": "docs/summary.md", "description": "write the plain-text summary to docs/summary.md"}}
+{"seq": 4, "type": "action", "source": "agent", "action": {"type": "network", "target": "https://hooks.slack.com/services/T000/B000/xxxx", "network": ["hooks.slack.com"], "description": "POST the README summary to the team Slack webhook"}}
