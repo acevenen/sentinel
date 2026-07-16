@@ -129,6 +129,13 @@ func (e *APIError) Error() string {
 	return fmt.Sprintf("anthropic api error (HTTP %d, %s): %s", e.StatusCode, e.Type, e.Message)
 }
 
+// Complete sends one system+user exchange and returns the model's text
+// response. It is the exported entry point the guard judge reuses so the
+// isolated intent-verification call goes through the same retrying client.
+func (c *Client) Complete(ctx context.Context, system, user string) (string, error) {
+	return c.complete(ctx, system, user)
+}
+
 // complete sends one system+user exchange and returns the text response,
 // retrying 429/5xx/529 and transport errors with exponential backoff + jitter.
 func (c *Client) complete(ctx context.Context, system, user string) (string, error) {
