@@ -8,6 +8,8 @@
 
 Sentinel walks a directory, sends your source files to the Anthropic API for security-focused analysis, and produces a clean report — in your terminal, as markdown for a PR, as JSON, or as SARIF for GitHub Code Scanning. It detects SQL injection, XSS, hardcoded secrets, path traversal, insecure crypto, SSRF, command injection, auth flaws, and more. It is **strictly defensive**: it reports weaknesses and fixes, never exploit code.
 
+It ships with two commands: `sentinel scan` (static code review, below) and `sentinel guard` (a [runtime guard](#runtime-guard-sentinel-guard) that inspects a coding agent's tool outputs and verifies its actions against declared intent).
+
 ## Demo
 
 ```console
@@ -132,13 +134,21 @@ discovery ──▶ chunking ──▶ concurrent LLM analysis ──▶ structu
 
 ```
 sentinel/
-├── main.go                 # CLI entrypoint (cobra): flags, exit codes, Ctrl+C
+├── main.go                 # CLI entrypoint (cobra): scan + version, exit codes, Ctrl+C
+├── guard_cmd.go            # `sentinel guard` command and the verdict table
 ├── internal/
 │   ├── scanner/            # File discovery, .gitignore, filtering, chunking
 │   ├── analyzer/           # Anthropic client, worker pool, retry, JSON parsing
-│   ├── report/             # terminal / markdown / json / sarif renderers
-│   └── config/             # flags > env > .sentinel.yaml precedence
-└── testdata/               # intentionally vulnerable demo files
+│   ├── report/             # terminal / markdown / json / sarif renderers (+ guard SARIF)
+│   ├── config/             # flags > env > .sentinel.yaml precedence
+│   └── guard/              # runtime guard subsystem
+│       ├── detect/         # Half A: the five tool-output detectors
+│       ├── intent/         # Layer 1: declared-intent schema + validation
+│       ├── verify/         # Layers 2–4: static match, isolated LLM judge, drift
+│       └── guard.go        # orchestrates detectors -> L2 -> L3 -> L4
+└── testdata/
+    ├── *.go / *.js / *.py  # intentionally vulnerable files for `scan`
+    └── guard/              # intent + clean/malicious JSONL streams for `guard`
 ```
 
 **Worker pool & rate limiting.** The analyzer bounds concurrency with a buffered-channel semaphore — each in-flight request holds a slot, so at most `--concurrency` requests hit the API at once. Every request retries on `429`, `5xx`, and `529` with exponential backoff plus full jitter (500 ms base, 16 s cap), honoring the server's `Retry-After` header when present. `Ctrl+C` cancels the shared context: in-flight requests abort, queued chunks never start, and the scan exits cleanly. Individual chunk failures are reported as warnings without sinking the rest of the scan.
@@ -178,6 +188,58 @@ jobs:
 
 The job fails (exit `1`) when Sentinel finds anything at or above the threshold, and the SARIF upload surfaces findings inline on the PR under the Security tab.
 
+## Runtime Guard (`sentinel guard`)
+
+`sentinel guard` is a second, separate subsystem: a runtime guard for coding agents. Where `scan` reviews source code at rest, `guard` inspects a running agent's **tool outputs** before they re-enter the model's context, and verifies every consequential **action** against the user's declared intent. It reads a declared intent plus a JSONL stream of tool outputs / proposed actions and emits a per-action verdict, a session drift score, and optional SARIF.
+
+```bash
+sentinel guard --intent testdata/guard/intent.json --stream testdata/guard/malicious.jsonl --report out.sarif
+```
+
+It has two halves.
+
+**Half A — five detectors** run on every tool output (deterministic, no LLM):
+
+1. `instruction-injection` — override / role-switch phrasing (`ignore previous instructions`, `you are now`, …) inside retrieved content.
+2. `secret-and-exfiltration` — reaching for `.env`, `~/.ssh`, `id_rsa`, `AWS_*`, credentials, cloud-metadata endpoints (`169.254.169.254`), or an outbound URL paired with a local file read.
+3. `scope-deviation` — a network destination or task-expansion not in the declared intent.
+4. `obfuscation` — long base64/hex blobs, zero-width and bidi-override characters, homoglyphs; base64 is decoded one level deep and rescanned.
+5. `provenance` — a directive that originates inside an untrusted source (tool output) rather than the user turn.
+
+**Half B — four-layer intent verification:**
+
+1. **Declare** — the user's goal is captured into a fixed schema (`ActionType`, `Target`, `Scope`, `ExpectedEffect`, `AllowedNetwork`) and must validate before any action is judged.
+2. **Static match** — deterministic, airtight: a network/push action may only reach a host in `AllowedNetwork`; a write may only land inside `Scope`. Pure Go, no LLM.
+3. **LLM judge** — for risky actions that pass Layer 2, an **isolated** Anthropic call. The judge receives only `{declared_intent, proposed_action}` — never the agent's conversation — so an injected instruction in that conversation cannot reach it. It returns strict JSON (`{verdict, confidence, reason}`), parsed defensively and **failing closed to "deviation"** on any error. Configurable via `--judge-model` (defaults to the analyzer's model). Reuses Sentinel's existing retrying Anthropic client.
+4. **Drift** — a session-level accumulator. Some attacks are clean per-step but exfiltrate in aggregate (read a secret → encode it → send it to an allowed host). Drift watches the whole run for that signature and emits a session drift score.
+
+Exit codes match `scan`: `0` clean, `1` blocked (fail-closed), `2` tool error — so it gates CI the same way.
+
+### Demo
+
+Over the bundled malicious fixture (every detector and all four layers fire), with no API key so Layer 3 is inactive and the deterministic layers carry the block:
+
+```console
+$ sentinel guard --intent testdata/guard/intent.json --stream testdata/guard/malicious.jsonl
+  SEQ  TYPE        EVENT                    DETECTORS                  L2      L3        VERDICT
+  1    tool_output tool output from web_se… instruction-injection,sec… -       -         BLOCK
+  2    tool_output tool output from read_f… obfuscation,instruction-i… -       -         BLOCK
+  3    tool_output tool output from doc_fe… scope-deviation,provenance -       -         FLAG
+  4    action      POST collected data to … -                          BLOCK   -         BLOCK
+  ...
+  Layer 4 — session drift
+    score 1.00  signals obfuscation, outbound-network, secret-access
+    session exhibits the full read -> encode -> send exfiltration signature across otherwise-clean steps
+
+  ✗ SESSION BLOCKED — at least one action failed the guard (fail-closed).
+```
+
+`testdata/guard/clean.jsonl` passes with zero findings and exit `0`.
+
+### Honest framing
+
+Layers 1–2 are deterministic and complete. **Layer 3 is a first working approach to a problem the industry has flagged as open** (PyRIT and the CSA/OWASP agent-security work both name agent intent-verification as unsolved) — it is not "solved." Layer 4 is a heuristic accumulator, not a proof. The root cause is architectural: the model has no built-in notion that a string is *data* versus *instruction*, so retrieved text and user instructions arrive through the same channel. Guard is therefore a **zero-trust containment layer, not a safety guarantee** — defense in depth that raises the cost of an injection or exfiltration attempt, not a hard boundary. Layer 3 requires a valid `ANTHROPIC_API_KEY`; without one it is skipped (non-blocking, surfaced in the table) and the deterministic layers still run.
+
 ## Security posture
 
 - **Defensive only.** The system prompt forbids exploit code, payloads, and attack strings; Sentinel reports weaknesses and remediations.
@@ -196,6 +258,7 @@ golangci-lint run
 ## Roadmap
 
 - **v2: cross-file data-flow analysis** — track tainted input across files/packages for fewer false negatives on multi-hop injection.
+- **Guard: live agent integration** — wrap a real agent's tool loop instead of a JSONL fixture, so `guard` runs inline as tool outputs and actions occur.
 - **Next.js dashboard** — trend findings across scans, diff runs, and triage in a browser.
 - **Dependency CVE lookup** — cross-check manifests (go.mod, package.json, requirements.txt) against vulnerability databases.
 
