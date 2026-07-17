@@ -55,6 +55,26 @@ func TestAllowsHostEmptyNetwork(t *testing.T) {
 	}
 }
 
+func TestAllowsHostWildcard(t *testing.T) {
+	// A "*" entry means unbounded egress and must allow any host — consistent
+	// with how the permission-risk scorer reads it.
+	star := Intent{AllowedNetwork: []string{"*"}}
+	for _, h := range []string{"evil.example", "hooks.slack.com", "169.254.169.254"} {
+		if !star.AllowsHost(h) {
+			t.Errorf("AllowedNetwork [*] should allow %q", h)
+		}
+	}
+
+	// A "*.domain" entry allows the domain and its subdomains only.
+	sub := Intent{AllowedNetwork: []string{"*.example.com"}}
+	if !sub.AllowsHost("api.example.com") || !sub.AllowsHost("example.com") {
+		t.Error("*.example.com should allow example.com and subdomains")
+	}
+	if sub.AllowsHost("evil.com") {
+		t.Error("*.example.com must not allow an unrelated host")
+	}
+}
+
 func TestDeclareRejectsInvalid(t *testing.T) {
 	if _, err := Declare(Intent{ActionType: "x"}); err == nil {
 		t.Error("Declare should reject an incomplete intent")

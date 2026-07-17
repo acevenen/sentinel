@@ -42,7 +42,9 @@ func (i Intent) Validate() error {
 
 // AllowsHost reports whether host is in the declared AllowedNetwork. Matching
 // is case-insensitive and treats an allow-list entry as matching that host or
-// any subdomain of it (e.g. "slack.com" allows "hooks.slack.com").
+// any subdomain of it (e.g. "slack.com" allows "hooks.slack.com"). A "*" (or
+// "0.0.0.0/0") entry means unbounded egress and allows any host; a "*.domain"
+// entry allows that domain and its subdomains.
 func (i Intent) AllowsHost(host string) bool {
 	host = strings.ToLower(strings.TrimSpace(host))
 	if host == "" {
@@ -53,6 +55,10 @@ func (i Intent) AllowsHost(host string) bool {
 		if allowed == "" {
 			continue
 		}
+		if allowed == "*" || allowed == "0.0.0.0/0" {
+			return true
+		}
+		allowed = strings.TrimPrefix(allowed, "*.")
 		if host == allowed || strings.HasSuffix(host, "."+allowed) {
 			return true
 		}
