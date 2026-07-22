@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
-	"github.com/acevenen/sentinel/internal/analyzer"
 	"github.com/acevenen/sentinel/internal/config"
 	"github.com/acevenen/sentinel/internal/evaluate"
-	"github.com/acevenen/sentinel/internal/guard/verify"
 	"github.com/acevenen/sentinel/internal/report"
 )
 
@@ -56,25 +54,11 @@ func newEvaluateCmd() *cobra.Command {
 				scenarios = append(scenarios, extra...)
 			}
 
-			// Layer 3 judge: reuse the analyzer client when a key is present.
-			var judge verify.Judge
-			if apiKey := os.Getenv("ANTHROPIC_API_KEY"); apiKey != "" {
-				judge = verify.NewLLMJudge(analyzer.NewClient(apiKey, judgeModel), judgeModel)
-			}
+			rep := evaluate.Evaluate(cmd.Context(), manifest, scenarios, newJudge(judgeModel))
 
-			rep := evaluate.Evaluate(cmd.Context(), manifest, scenarios, judge)
-
-			dest := os.Stdout
-			if outPath != "" {
-				f, err := os.Create(outPath)
-				if err != nil {
-					return fmt.Errorf("creating report file: %w", err)
-				}
-				defer func() { _ = f.Close() }()
-				dest = f
-				color.NoColor = true
-			}
-			if err := report.RenderEvaluation(dest, format, rep); err != nil {
+			if err := writeReport(outPath, func(w io.Writer) error {
+				return report.RenderEvaluation(w, format, rep)
+			}); err != nil {
 				return err
 			}
 

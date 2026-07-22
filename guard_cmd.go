@@ -4,17 +4,16 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/acevenen/sentinel/internal/analyzer"
 	"github.com/acevenen/sentinel/internal/config"
 	"github.com/acevenen/sentinel/internal/guard"
 	"github.com/acevenen/sentinel/internal/guard/detect"
 	"github.com/acevenen/sentinel/internal/guard/intent"
-	"github.com/acevenen/sentinel/internal/guard/verify"
 	"github.com/acevenen/sentinel/internal/report"
 )
 
@@ -52,11 +51,7 @@ func newGuardCmd() *cobra.Command {
 			// Layer 3 judge: reuse Sentinel's analyzer client when an API key is
 			// present. Without a key, Layer 3 is skipped (non-blocking) so the
 			// deterministic layers still run offline.
-			var judge verify.Judge
-			apiKey := os.Getenv("ANTHROPIC_API_KEY")
-			if apiKey != "" {
-				judge = verify.NewLLMJudge(analyzer.NewClient(apiKey, judgeModel), judgeModel)
-			}
+			judge := newJudge(judgeModel)
 
 			session := guard.Run(cmd.Context(), events, guard.Options{
 				Intent:    declared,
@@ -67,16 +62,10 @@ func newGuardCmd() *cobra.Command {
 			report.RenderGuardTable(os.Stdout, session, judge != nil)
 
 			if reportPath != "" {
-				f, err := os.Create(reportPath)
-				if err != nil {
-					return fmt.Errorf("creating report file: %w", err)
-				}
-				if err := report.WriteGuardSARIF(f, streamPath, session, version); err != nil {
-					_ = f.Close()
+				if err := writeReport(reportPath, func(w io.Writer) error {
+					return report.WriteGuardSARIF(w, streamPath, session, version)
+				}); err != nil {
 					return err
-				}
-				if err := f.Close(); err != nil {
-					return fmt.Errorf("writing report file: %w", err)
 				}
 				fmt.Fprintf(os.Stderr, "sentinel: wrote SARIF report to %s\n", reportPath)
 			}

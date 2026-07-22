@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/acevenen/sentinel/internal/hunt"
@@ -69,17 +69,9 @@ func newHuntCmd() *cobra.Command {
 				return err
 			}
 
-			dest := os.Stdout
-			if outPath != "" {
-				f, err := os.Create(outPath)
-				if err != nil {
-					return fmt.Errorf("creating report file: %w", err)
-				}
-				defer func() { _ = f.Close() }()
-				dest = f
-				color.NoColor = true
-			}
-			if err := report.RenderHunt(dest, format, rep); err != nil {
+			if err := writeReport(outPath, func(w io.Writer) error {
+				return report.RenderHunt(w, format, rep)
+			}); err != nil {
 				return err
 			}
 

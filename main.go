@@ -17,7 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 
 	"github.com/acevenen/sentinel/internal/analyzer"
@@ -203,25 +202,10 @@ func runScan(ctx context.Context, target string, cfg config.Config) error {
 		Findings:    filtered,
 	}
 
-	var dest io.Writer = os.Stdout
-	var closeReport func() error
-	if cfg.Out != "" {
-		f, err := os.Create(cfg.Out)
-		if err != nil {
-			return fmt.Errorf("creating report file: %w", err)
-		}
-		dest = f
-		closeReport = f.Close
-		color.NoColor = true // never write ANSI codes into files
-	}
-
-	if err := report.Render(dest, cfg.Format, rep); err != nil {
+	if err := writeReport(cfg.Out, func(w io.Writer) error {
+		return report.Render(w, cfg.Format, rep)
+	}); err != nil {
 		return err
-	}
-	if closeReport != nil {
-		if err := closeReport(); err != nil {
-			return fmt.Errorf("writing report file: %w", err)
-		}
 	}
 
 	if len(filtered) > 0 {
