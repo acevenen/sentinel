@@ -24,13 +24,13 @@ import (
 // authorization: nothing outside this scope is ever contacted.
 type Program struct {
 	Name       string   `yaml:"name"`
-	Platform   string   `yaml:"platform"`
+	Platform   string   `yaml:"platform,omitempty"`
 	BaseURL    string   `yaml:"base_url"`
 	InScope    []string `yaml:"in_scope"`
-	OutOfScope []string `yaml:"out_of_scope"`
+	OutOfScope []string `yaml:"out_of_scope,omitempty"`
 	// RateLimitRPS caps outbound requests per second (politeness / anti-DoS).
 	// Zero means use the conservative default.
-	RateLimitRPS float64           `yaml:"rate_limit_rps"`
+	RateLimitRPS float64           `yaml:"rate_limit_rps,omitempty"`
 	Identities   []Identity        `yaml:"identities"`
 	Requests     []RequestTemplate `yaml:"requests"`
 }
@@ -39,9 +39,9 @@ type Program struct {
 // is read from TokenEnv at runtime and never persisted to the manifest or logs.
 type Identity struct {
 	Name     string `yaml:"name"`
-	Header   string `yaml:"header"`    // e.g. "Authorization"
-	Prefix   string `yaml:"prefix"`    // e.g. "Bearer " (optional)
-	TokenEnv string `yaml:"token_env"` // env var holding the session token
+	Header   string `yaml:"header"`           // e.g. "Authorization"
+	Prefix   string `yaml:"prefix,omitempty"` // e.g. "Bearer " (optional)
+	TokenEnv string `yaml:"token_env"`        // env var holding the session token
 }
 
 // RequestTemplate is an endpoint that takes an object identifier, plus the
@@ -56,11 +56,11 @@ type RequestTemplate struct {
 	// Owned maps an identity name to the object IDs it legitimately owns.
 	Owned map[string][]string `yaml:"owned"`
 	// SuccessStatus is the HTTP status a legitimate owner receives (default 200).
-	SuccessStatus int `yaml:"success_status"`
+	SuccessStatus int `yaml:"success_status,omitempty"`
 	// Severity overrides the finding severity for this endpoint: "high"
 	// (default) or "critical". Mark endpoints exposing sensitive data such as
 	// payments or PII as critical.
-	Severity string `yaml:"severity"`
+	Severity string `yaml:"severity,omitempty"`
 }
 
 // idPlaceholder is the token replaced with an object ID in a template path.
@@ -97,15 +97,26 @@ func readOnlyMethod(method string) bool {
 	}
 }
 
+// ParseProgram unmarshals a program manifest without validating it — used when
+// merging an in-progress manifest (e.g. one that does not yet have two
+// identities) during HAR import.
+func ParseProgram(data []byte) (Program, error) {
+	var p Program
+	if err := yaml.Unmarshal(data, &p); err != nil {
+		return Program{}, fmt.Errorf("parsing program: %w", err)
+	}
+	return p, nil
+}
+
 // LoadProgram reads and validates a program manifest from a YAML file.
 func LoadProgram(path string) (Program, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return Program{}, fmt.Errorf("reading program file: %w", err)
 	}
-	var p Program
-	if err := yaml.Unmarshal(data, &p); err != nil {
-		return Program{}, fmt.Errorf("parsing program file %s: %w", path, err)
+	p, err := ParseProgram(data)
+	if err != nil {
+		return Program{}, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := p.Validate(); err != nil {
 		return Program{}, err

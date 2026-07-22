@@ -86,5 +86,8 @@ func newHuntCmd() *cobra.Command {
 	cmd.Flags().StringVar(&format, "format", report.HuntFormatTerminal, "output format: terminal, json, or markdown (HackerOne-ready)")
 	cmd.Flags().StringVar(&outPath, "out", "", "write the report to a file instead of stdout")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "show the planned requests and scope decisions without sending anything")
+
+	// `sentinel hunt import` builds a program manifest from a HAR capture.
+	cmd.AddCommand(newHuntImportCmd())
 	return cmd
 }

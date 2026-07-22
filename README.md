@@ -310,6 +310,14 @@ sentinel hunt --program program.yaml --dry-run  # show scope decisions, send not
 sentinel hunt --program program.yaml --format markdown   # HackerOne-ready reports
 ```
 
+**Getting the endpoints (`sentinel hunt import`).** You don't hand-write the request list. Browse the target as each test account with your browser DevTools **Network** tab (or Burp) open, **Save all as HAR**, and let `import` build the manifest — it keeps only read-only requests whose path has an identifier, collapses `/orders/1001` and `/orders/1002` into `/orders/{id}`, and records which objects each account owns. Capture both accounts and merge:
+
+```bash
+sentinel hunt import --har alice.har --identity alice --out program.yaml
+sentinel hunt import --har bob.har   --identity bob   --program program.yaml --out program.yaml
+# then export the token env vars it names, review scope, and run `sentinel hunt`
+```
+
 **The test.** With Alice's session, fetch Bob's object. If Alice receives Bob's object, object-level authorization is broken. Concretely, per endpoint: each identity fetches its *own* objects to establish a baseline, then each identity's session is replayed against the *other* identity's objects. A finding requires both a success status **and** a response body byte-identical to the victim's own baseline — so a generic `200` returning the caller's own data is not a false positive.
 
 **Safe by construction — this is the important part.** `hunt` is built the way a professional researcher stays in-scope and out of trouble:
