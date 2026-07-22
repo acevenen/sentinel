@@ -62,6 +62,34 @@ func TestStatusDefault(t *testing.T) {
 	}
 }
 
+func TestFindingSeverity(t *testing.T) {
+	if (RequestTemplate{}).FindingSeverity() != SeverityHigh {
+		t.Error("default finding severity should be high")
+	}
+	if (RequestTemplate{Severity: "critical"}).FindingSeverity() != SeverityCritical {
+		t.Error("critical severity not honored")
+	}
+	if (RequestTemplate{Severity: "CRITICAL"}).FindingSeverity() != SeverityCritical {
+		t.Error("severity match should be case-insensitive")
+	}
+}
+
+func TestValidateRejectsBadSeverity(t *testing.T) {
+	p := Program{
+		Name: "p", BaseURL: "https://api.example.com", InScope: []string{"api.example.com"},
+		Identities: []Identity{
+			{Name: "a", Header: "Authorization", TokenEnv: "A"},
+			{Name: "b", Header: "Authorization", TokenEnv: "B"},
+		},
+		Requests: []RequestTemplate{
+			{ID: "r", Method: "GET", Path: "/x/{id}", Severity: "medium", Owned: map[string][]string{"a": {"1"}}},
+		},
+	}
+	if err := p.Validate(); err == nil {
+		t.Error("severity other than high/critical should be rejected")
+	}
+}
+
 func TestLoadSampleProgram(t *testing.T) {
 	p, err := LoadProgram(filepath.Join("..", "..", "testdata", "hunt", "program.yaml"))
 	if err != nil {

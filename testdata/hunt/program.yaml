@@ -52,6 +52,7 @@ requests:
     method: GET
     path: "/v1/invoices/{id}"
     success_status: 200
+    severity: critical # invoices expose financial data — an IDOR here is critical
     owned:
       alice: ["inv-alice-1"]
       bob: ["inv-bob-1"]

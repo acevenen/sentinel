@@ -57,6 +57,10 @@ type RequestTemplate struct {
 	Owned map[string][]string `yaml:"owned"`
 	// SuccessStatus is the HTTP status a legitimate owner receives (default 200).
 	SuccessStatus int `yaml:"success_status"`
+	// Severity overrides the finding severity for this endpoint: "high"
+	// (default) or "critical". Mark endpoints exposing sensitive data such as
+	// payments or PII as critical.
+	Severity string `yaml:"severity"`
 }
 
 // idPlaceholder is the token replaced with an object ID in a template path.
@@ -71,6 +75,15 @@ func (r RequestTemplate) Status() int {
 		return 200
 	}
 	return r.SuccessStatus
+}
+
+// FindingSeverity returns the severity to assign a confirmed finding on this
+// endpoint, defaulting to high.
+func (r RequestTemplate) FindingSeverity() Severity {
+	if strings.EqualFold(strings.TrimSpace(r.Severity), string(SeverityCritical)) {
+		return SeverityCritical
+	}
+	return SeverityHigh
 }
 
 // readOnlyMethod reports whether a method only reads state. Hunt refuses
@@ -150,6 +163,9 @@ func (p Program) Validate() error {
 		}
 		if len(r.Owned) == 0 {
 			return fmt.Errorf("request %q must declare which object IDs each identity owns", r.ID)
+		}
+		if s := strings.ToLower(strings.TrimSpace(r.Severity)); s != "" && s != string(SeverityHigh) && s != string(SeverityCritical) {
+			return fmt.Errorf("request %q severity %q must be high or critical", r.ID, r.Severity)
 		}
 		for name := range r.Owned {
 			if !seen[name] {

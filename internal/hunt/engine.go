@@ -176,7 +176,7 @@ func (e *Engine) Run(ctx context.Context) (Report, error) {
 							Victim:    victimName,
 							ObjectID:  oid,
 							Status:    resp.Status,
-							Severity:  SeverityHigh,
+							Severity:  tmpl.FindingSeverity(),
 							Evidence: fmt.Sprintf(
 								"%s's session returned %s's object %q (HTTP %d, response body byte-identical to %s's own baseline)",
 								attacker.Name, victimName, oid, resp.Status, victimName),
