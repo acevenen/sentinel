@@ -1,0 +1,57 @@
+# Sample program manifest for `sentinel hunt`.
+#
+# This describes an AUTHORIZED bug-bounty program's scope and your own test
+# accounts. Only run hunt against programs that explicitly authorize testing,
+# and only with accounts you legitimately control.
+#
+# Session tokens are read from the environment (token_env), never from this
+# file. Export them before running, e.g.:
+#   export HUNT_ALICE_TOKEN=...   HUNT_BOB_TOKEN=...
+
+name: example-program
+platform: hackerone
+base_url: https://api.example.com
+
+# Scope is mandatory. Every request is checked against this before it is sent.
+# Out-of-scope always wins; an unlisted host is refused (fail-closed).
+in_scope:
+  - api.example.com
+  - "*.api.example.com"
+out_of_scope:
+  - internal.example.com
+  - admin.example.com
+
+# Politeness / anti-DoS: cap outbound requests per second.
+rate_limit_rps: 2
+
+# Your own test accounts. Each references an env var holding its session token.
+identities:
+  - name: alice
+    header: Authorization
+    prefix: "Bearer "
+    token_env: HUNT_ALICE_TOKEN
+  - name: bob
+    header: Authorization
+    prefix: "Bearer "
+    token_env: HUNT_BOB_TOKEN
+
+# Endpoints that take an object identifier ({id}), plus the object IDs each
+# account legitimately owns. Hunt fetches each account's own objects (baseline),
+# then replays them cross-account to test object-level authorization.
+requests:
+  # Quote paths — the {id} placeholder otherwise looks like YAML flow syntax.
+  - id: get-order
+    method: GET
+    path: "/v1/orders/{id}"
+    success_status: 200
+    owned:
+      alice: ["1001"]
+      bob: ["2002"]
+
+  - id: get-invoice
+    method: GET
+    path: "/v1/invoices/{id}"
+    success_status: 200
+    owned:
+      alice: ["inv-alice-1"]
+      bob: ["inv-bob-1"]

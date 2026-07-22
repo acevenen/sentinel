@@ -8,7 +8,7 @@
 
 Sentinel walks a directory, sends your source files to the Anthropic API for security-focused analysis, and produces a clean report — in your terminal, as markdown for a PR, as JSON, or as SARIF for GitHub Code Scanning. It detects SQL injection, XSS, hardcoded secrets, path traversal, insecure crypto, SSRF, command injection, auth flaws, and more. It is **strictly defensive**: it reports weaknesses and fixes, never exploit code.
 
-It ships with three commands: `sentinel scan` (static code review, below), `sentinel guard` (a [runtime guard](#runtime-guard-sentinel-guard) that inspects a coding agent's tool outputs and verifies its actions against declared intent), and `sentinel evaluate` (a [pre-deployment agent evaluator](#agent-evaluation-sentinel-evaluate) that scores whether an agent can be manipulated into abusing its own authority).
+Sentinel's through-line is **authorization**: is an actor doing only what it's allowed to? Its commands come at that from both sides — `sentinel scan` (static code review, below), `sentinel guard` (a [runtime guard](#runtime-guard-sentinel-guard) that verifies a coding agent's actions against declared intent), `sentinel evaluate` (a [pre-deployment agent evaluator](#agent-evaluation-sentinel-evaluate) that scores whether an agent can be manipulated into abusing its own authority), and `sentinel hunt` (an [authorized IDOR/BOLA tester](#bug-bounty-idorbola-sentinel-hunt) for bug bounty work — does an API enforce object-level authorization?).
 
 ## Demo
 
@@ -137,27 +137,34 @@ sentinel/
 ├── main.go                 # CLI entrypoint (cobra): scan + version, exit codes, Ctrl+C
 ├── guard_cmd.go            # `sentinel guard` command (flags + orchestration)
 ├── evaluate_cmd.go         # `sentinel evaluate` command (flags + orchestration)
+├── hunt_cmd.go             # `sentinel hunt` command (flags + orchestration)
 ├── internal/
 │   ├── scanner/            # File discovery, .gitignore, filtering, chunking
 │   ├── analyzer/           # Anthropic client, worker pool, retry, JSON parsing
-│   ├── report/             # all rendering: scan (terminal/md/json/sarif), guard table + SARIF, evaluate report
+│   ├── report/             # all rendering: scan, guard, evaluate, hunt (terminal/md/json/sarif)
 │   ├── config/             # flags > env > .sentinel.yaml precedence
 │   ├── guard/              # runtime guard subsystem
 │   │   ├── detect/         # Half A: the five tool-output detectors
 │   │   ├── intent/         # Layer 1: declared-intent schema + validation
 │   │   ├── verify/         # Layers 2–4: static match, isolated LLM judge, drift
 │   │   └── guard.go        # orchestrates detectors -> L2 -> L3 -> L4
-│   └── evaluate/           # agent evaluator
-│       ├── manifest.go     # agent.yaml schema + permission helpers
-│       ├── risk.go         # static permission-risk score
-│       ├── authority.go    # deterministic restricted-action / permission check
-│       ├── scenario.go     # embedded attack-scenario library loader
-│       ├── evaluate.go     # runs scenarios through guard -> Agent Security Score
-│       └── scenarios/      # the built-in attack library (embedded JSON)
+│   ├── evaluate/           # agent evaluator
+│   │   ├── manifest.go     # agent.yaml schema + permission helpers
+│   │   ├── risk.go         # static permission-risk score
+│   │   ├── authority.go    # deterministic restricted-action / permission check
+│   │   ├── scenario.go     # embedded attack-scenario library loader
+│   │   ├── evaluate.go     # runs scenarios through guard -> Agent Security Score
+│   │   └── scenarios/      # the built-in attack library (embedded JSON)
+│   └── hunt/               # IDOR/BOLA differential tester
+│       ├── program.go      # program.yaml scope + identities + request templates
+│       ├── scope.go        # fail-closed scope gate (the safety core)
+│       ├── client.go       # scope-enforcing, read-only, rate-limited HTTP client
+│       └── engine.go       # baseline -> cross-account replay -> diff -> findings
 └── testdata/
     ├── *.go / *.js / *.py  # intentionally vulnerable files for `scan`
     ├── guard/              # intent + clean/malicious JSONL streams for `guard`
-    └── evaluate/           # sample agent.yaml manifest for `evaluate`
+    ├── evaluate/           # sample agent.yaml manifest for `evaluate`
+    └── hunt/               # sample program.yaml scope manifest for `hunt`
 ```
 
 **Worker pool & rate limiting.** The analyzer bounds concurrency with a buffered-channel semaphore — each in-flight request holds a slot, so at most `--concurrency` requests hit the API at once. Every request retries on `429`, `5xx`, and `529` with exponential backoff plus full jitter (500 ms base, 16 s cap), honoring the server's `Retry-After` header when present. `Ctrl+C` cancels the shared context: in-flight requests abort, queued chunks never start, and the scan exits cleanly. Individual chunk failures are reported as warnings without sinking the rest of the scan.
@@ -293,6 +300,50 @@ The score reflects an honest split: nine of ten attack/benign scenarios are deci
 
 Same honesty doctrine as guard: this is a containment and evaluation tool, not a proof. It raises attacker cost and surfaces excessive authority before deployment; it does not certify safety.
 
+## Bug Bounty: IDOR/BOLA (`sentinel hunt`)
+
+`scan`/`guard`/`evaluate` ask whether an *agent* stays within its authority. `hunt` asks the mirror question of an *API*: does it enforce **object-level authorization**, or can one user read another user's objects by changing an ID? That's IDOR / BOLA (CWE-639, OWASP API1:2023) — the highest-signal bug class in most bounty programs.
+
+```bash
+sentinel hunt --program program.yaml            # run the differential test
+sentinel hunt --program program.yaml --dry-run  # show scope decisions, send nothing
+sentinel hunt --program program.yaml --format markdown   # HackerOne-ready reports
+```
+
+**The test.** With Alice's session, fetch Bob's object. If Alice receives Bob's object, object-level authorization is broken. Concretely, per endpoint: each identity fetches its *own* objects to establish a baseline, then each identity's session is replayed against the *other* identity's objects. A finding requires both a success status **and** a response body byte-identical to the victim's own baseline — so a generic `200` returning the caller's own data is not a false positive.
+
+**Safe by construction — this is the important part.** `hunt` is built the way a professional researcher stays in-scope and out of trouble:
+
+- **Scope is mandatory and fail-closed.** Every request's host is checked against the program's `in_scope` / `out_of_scope` before it is sent; out-of-scope always wins, and an unlisted host is refused. `--dry-run` prints every planned request with its scope decision so you can verify before touching anything.
+- **Your own test accounts only.** Sessions are your test identities' tokens, read from environment variables (`token_env`), never stored in the manifest or logs. `hunt` tests authorization; it does not crack it.
+- **Read-only.** Only `GET`/`HEAD` are allowed — a write method is rejected at load time. It proves the read leak without mutating the target's data.
+- **Rate-limited.** Outbound requests are paced to the program's declared `rate_limit_rps`. Not a DoS tool.
+
+Only run it against programs that authorize testing. Output is a finding plus a HackerOne-ready reproduction (endpoint, the two accounts, the request, the evidence, impact, remediation) — a draft to verify and submit, not an auto-submitter.
+
+### Demo
+
+Against a deliberately-vulnerable local API (the test suite runs this end-to-end with `httptest`, touching nothing external):
+
+```console
+$ sentinel hunt --program program.yaml
+Sentinel Hunt — IDOR/BOLA
+  Program            demo-local
+  Authorization tests 2
+  Baselines           2
+
+  ✗ 2 BOLA/IDOR finding(s)
+  [HIGH] get-order
+  GET http://target/orders/2002
+  alice → bob's object 2002
+  alice's session returned bob's object "2002" (HTTP 200, response body byte-identical to bob's own baseline)
+  ...
+```
+
+A properly-authorized API (each token may read only its own object) yields zero findings and exits `0`. Exit codes match the other commands (`0` clean, `1` finding, `2` tool error), so `hunt` gates a CI/regression job too.
+
+**Scope of this first version (honest framing):** `hunt` is a *differential authorization tester*, not a crawler or a general web scanner. It tests the endpoints and object IDs you give it — it does not discover endpoints, enumerate IDs, or test other vuln classes (XSS/SQLi/etc.). Auto-discovery and HackerOne-API scope import are roadmap, deliberately deferred to keep the tool focused and its behavior auditable.
+
 ## Security posture
 
 - **Defensive only.** The system prompt forbids exploit code, payloads, and attack strings; Sentinel reports weaknesses and remediations.
@@ -310,15 +361,16 @@ golangci-lint run
 
 ## Roadmap
 
-Sentinel's north star is an **AI Security Reasoning Platform** — a tool you run before deploying an autonomous agent, that independently reasons about whether it can be manipulated, abused, or compromised. The path there, honestly staged:
+Sentinel's through-line is **authorization** — is an actor (an AI agent, or a user hitting an API) doing only what it's allowed to? Every command is a different lens on that one question. The path forward, honestly staged:
 
-- **Built:** `scan` (SAST), `guard` (runtime containment), `evaluate` (pre-deployment Agent Security Score with permission-risk + deterministic authority checks).
+- **Built:** `scan` (SAST), `guard` (runtime agent containment), `evaluate` (pre-deployment Agent Security Score with permission-risk + deterministic authority checks), `hunt` (scope-enforced IDOR/BOLA differential testing for bug bounty).
 - **Next:**
+  - **Hunt: object-ID enumeration & endpoint import** — help populate the request corpus (from a HAR/Burp export or the HackerOne program's structured scope) instead of hand-writing it, while keeping the same fail-closed scope gate.
   - **Guard live-agent integration** — wrap a real agent's tool loop instead of a JSONL fixture, so `guard` runs inline as tool outputs and actions occur.
-  - **Cross-file data-flow analysis** for `scan` — track tainted input across files/packages for fewer false negatives on multi-hop injection.
-  - **Richer evaluate scenario library** — expand beyond the seed set toward the OWASP-for-LLMs categories (memory poisoning, output handling, agent identity), each as a reproducible `testdata` fixture.
-  - **Dependency CVE lookup** — cross-check `go.mod`/`package.json`/`requirements.txt` against vulnerability databases.
-- **Vision:** trust-boundary mapping and decision tracing across a whole agent, cross-agent attack graphs, and a knowledge/self-improvement loop where every confirmed attack becomes a regression benchmark. These are direction, not shipped — held to the same honesty standard as everything above.
+  - **Richer evaluate scenario library** — expand the seed set toward more OWASP-for-LLMs categories, each as a reproducible `testdata` fixture.
+- **Vision:** for the agent side, trust-boundary mapping and decision tracing across a whole agent; for the API side, more broken-authorization classes (function-level authZ, mass assignment). Direction, not shipped — held to the same honesty standard as everything above.
+
+Deliberately **not** on the roadmap: turning `hunt` into a general web crawler/scanner or adding other vuln classes (XSS/SQLi/etc.). It stays a focused, auditable authorization tester.
 
 ## License
 
