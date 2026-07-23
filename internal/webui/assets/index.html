@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sentinel</title>
+  <link rel="stylesheet" href="/app.css" />
+  <script>window.SENTINEL_TOKEN = "__SENTINEL_TOKEN__";</script>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">🛡️</div>
+        <div class="brand-text">
+          <div class="brand-name">Sentinel</div>
+          <div class="brand-sub">Authorization security</div>
+        </div>
+      </div>
+      <nav class="nav">
+        <div class="nav-group-label">Start here</div>
+        <button class="nav-item active" data-view="welcome"><span class="ni-ico">✦</span> Welcome</button>
+        <button class="nav-item" data-view="howto"><span class="ni-ico">🧭</span> Point at a project</button>
+        <div class="nav-group-label">Tools</div>
+        <button class="nav-item" data-view="hunt"><span class="ni-ico">🎯</span> Hunt · IDOR/BOLA</button>
+        <button class="nav-item" data-view="evaluate"><span class="ni-ico">📊</span> Evaluate agent</button>
+        <button class="nav-item" data-view="guard"><span class="ni-ico">🧱</span> Guard runtime</button>
+        <button class="nav-item" data-view="scan"><span class="ni-ico">🔎</span> Scan code</button>
+      </nav>
+      <div class="sidebar-foot">
+        <span id="version-tag">sentinel</span>
+        <span id="judge-dot" class="judge-dot" title="Layer 3 LLM judge">L3</span>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- WELCOME -->
+      <section class="view active" data-view="welcome">
+        <div class="hero">
+          <div class="hero-mark">🛡️</div>
+          <h1>Welcome to Sentinel</h1>
+          <p class="hero-lede">One question, four tools: <b>is authority being respected?</b> Sentinel checks whether AI agents stay within their authority — and whether the APIs behind them enforce it.</p>
+        </div>
+
+        <div class="card-grid">
+          <div class="feature-card" data-goto="hunt">
+            <div class="fc-ico">🎯</div>
+            <h3>Hunt · IDOR/BOLA</h3>
+            <p>Test an authorized bug-bounty target: can one user read another user's objects by changing an ID? Scope-enforced, read-only, HackerOne-ready reports.</p>
+            <span class="fc-go">Open →</span>
+          </div>
+          <div class="feature-card" data-goto="evaluate">
+            <div class="fc-ico">📊</div>
+            <h3>Evaluate agent</h3>
+            <p>Score an AI agent before deployment. Runs a library of attacks against its declared authority and returns an Agent Security Score.</p>
+            <span class="fc-go">Open →</span>
+          </div>
+          <div class="feature-card" data-goto="guard">
+            <div class="fc-ico">🧱</div>
+            <h3>Guard runtime</h3>
+            <p>Inspect a running agent's tool outputs and verify its actions against a declared intent — five detectors plus four verification layers.</p>
+            <span class="fc-go">Open →</span>
+          </div>
+          <div class="feature-card" data-goto="scan">
+            <div class="fc-ico">🔎</div>
+            <h3>Scan code</h3>
+            <p>Static security review of a codebase with Claude — SQLi, XSS, secrets, and more. Needs an Anthropic API key.</p>
+            <span class="fc-go">Open →</span>
+          </div>
+        </div>
+
+        <div class="note-strip">
+          <b>Safe by design.</b> Everything runs locally in this window. Hunt never leaves the scope you declare, never mutates data, and uses only your own test accounts. Nothing is sent anywhere except the targets you explicitly authorize.
+        </div>
+      </section>
+
+      <!-- HOWTO -->
+      <section class="view" data-view="howto">
+        <header class="view-head">
+          <h1>Point Sentinel at a project</h1>
+          <p>The fastest path from “I found an endpoint” to a submittable report. Five steps.</p>
+        </header>
+
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body">
+              <h3>Capture your two test accounts</h3>
+              <p>Open your browser DevTools → <b>Network</b> tab, browse the target as <b>account A</b>, then <b>Save all as HAR</b>. Repeat as <b>account B</b>. (Burp Suite's HAR export works too.)</p>
+              <div class="step-art" id="art-capture"></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body">
+              <h3>Import the captures</h3>
+              <p>Drop each HAR into <b>Hunt → Import</b>. Sentinel keeps read-only requests whose path has an ID, turns <code>/orders/1001</code> into <code>/orders/{id}</code>, and records which objects each account owns.</p>
+              <div class="step-art" id="art-import"></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body">
+              <h3>Confirm scope</h3>
+              <p>Review the generated manifest. Every request is checked against <code>in_scope</code> / <code>out_of_scope</code> before it is sent — out-of-scope is refused. This is what keeps you inside the program's rules.</p>
+              <div class="step-art" id="art-scope"></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body">
+              <h3>Add your session tokens</h3>
+              <p>Paste each test account's session token into the run panel. Tokens live only in memory for the run — never written to the manifest or to disk.</p>
+              <div class="step-art" id="art-tokens"></div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-num">5</div>
+            <div class="step-body">
+              <h3>Dry-run, then run</h3>
+              <p><b>Dry-run</b> shows every request and its scope decision without sending anything. Then <b>Run</b> performs the cross-account test and produces a HackerOne-ready report for each finding.</p>
+              <div class="step-art" id="art-run"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- HUNT -->
+      <section class="view" data-view="hunt">
+        <header class="view-head">
+          <h1>Hunt · IDOR / BOLA</h1>
+          <p>Broken object-level authorization testing for authorized bug-bounty targets.</p>
+        </header>
+
+        <div class="segmented" id="hunt-tabs">
+          <button class="seg active" data-huntview="import">1 · Import</button>
+          <button class="seg" data-huntview="program">2 · Manifest</button>
+          <button class="seg" data-huntview="run">3 · Dry-run &amp; Run</button>
+        </div>
+
+        <!-- import -->
+        <div class="huntview active" data-huntview="import">
+          <div class="panel">
+            <div class="field">
+              <label>Identity (which account this capture belongs to)</label>
+              <input id="import-identity" type="text" placeholder="alice" />
+            </div>
+            <div class="field">
+              <label>HAR capture <button class="link-btn" id="import-sample">load a sample</button></label>
+              <textarea id="import-har" class="mono" rows="7" placeholder="Paste the HAR JSON here, or drop a .har file…"></textarea>
+            </div>
+            <div class="row">
+              <label class="checkbox"><input type="checkbox" id="import-merge" /> Merge into the current manifest (for a second account)</label>
+            </div>
+            <div class="actions">
+              <button class="btn primary" id="import-run">Generate manifest →</button>
+            </div>
+            <div id="import-msg" class="msg"></div>
+          </div>
+        </div>
+
+        <!-- program -->
+        <div class="huntview" data-huntview="program">
+          <div class="panel">
+            <div class="field">
+              <label>Program manifest (YAML) <button class="link-btn" id="program-sample">load a sample</button></label>
+              <textarea id="program-yaml" class="mono" rows="16" placeholder="Your program.yaml — generated by Import, or paste your own…"></textarea>
+            </div>
+            <div class="hint">Scope is mandatory. Only run against programs that authorize testing.</div>
+          </div>
+        </div>
+
+        <!-- run -->
+        <div class="huntview" data-huntview="run">
+          <div class="panel">
+            <div class="actions">
+              <button class="btn" id="hunt-dryrun">Dry-run (send nothing)</button>
+              <button class="btn primary" id="hunt-run">Run test</button>
+            </div>
+            <div id="token-fields" class="token-fields"></div>
+            <div id="hunt-result" class="result"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EVALUATE -->
+      <section class="view" data-view="evaluate">
+        <header class="view-head">
+          <h1>Evaluate agent</h1>
+          <p>Score an AI agent's security posture against a library of attack scenarios.</p>
+        </header>
+        <div class="panel">
+          <div class="field">
+            <label>Agent manifest (YAML) <button class="link-btn" id="eval-sample">load a sample</button></label>
+            <textarea id="eval-agent" class="mono" rows="16" placeholder="Your agent.yaml — purpose, tools, permissions, scope, allowed_network…"></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="eval-run">Evaluate →</button>
+          </div>
+          <div id="eval-result" class="result"></div>
+        </div>
+      </section>
+
+      <!-- GUARD -->
+      <section class="view" data-view="guard">
+        <header class="view-head">
+          <h1>Guard runtime</h1>
+          <p>Verify a running agent's actions against a declared intent.</p>
+        </header>
+        <div class="panel">
+          <div class="field">
+            <label>Declared intent (JSON) <button class="link-btn" id="guard-intent-sample">load a sample</button></label>
+            <textarea id="guard-intent" class="mono" rows="7"></textarea>
+          </div>
+          <div class="field">
+            <label>Session stream (JSONL — one event per line) <button class="link-btn" id="guard-stream-sample">load a sample</button></label>
+            <textarea id="guard-stream" class="mono" rows="8"></textarea>
+          </div>
+          <div class="actions">
+            <button class="btn primary" id="guard-run">Guard session →</button>
+          </div>
+          <div id="guard-result" class="result"></div>
+        </div>
+      </section>
+
+      <!-- SCAN -->
+      <section class="view" data-view="scan">
+        <header class="view-head">
+          <h1>Scan code</h1>
+          <p>Static security review of a codebase with Claude.</p>
+        </header>
+        <div class="panel">
+          <div class="note-strip">
+            Scanning sends source files to the Anthropic API and needs a valid <code>ANTHROPIC_API_KEY</code> in the environment where you launched Sentinel. From this window it isn't wired yet — run it from the terminal:
+          </div>
+          <pre class="mono code-block">sentinel scan .\path\to\repo --severity high</pre>
+          <p class="hint">This tab will gain a folder picker once an API key is present.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

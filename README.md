@@ -10,6 +10,16 @@ Sentinel walks a directory, sends your source files to the Anthropic API for sec
 
 Sentinel's through-line is **authorization**: is an actor doing only what it's allowed to? Its commands come at that from both sides — `sentinel scan` (static code review, below), `sentinel guard` (a [runtime guard](#runtime-guard-sentinel-guard) that verifies a coding agent's actions against declared intent), `sentinel evaluate` (a [pre-deployment agent evaluator](#agent-evaluation-sentinel-evaluate) that scores whether an agent can be manipulated into abusing its own authority), and `sentinel hunt` (an [authorized IDOR/BOLA tester](#bug-bounty-idorbola-sentinel-hunt) for bug bounty work — does an API enforce object-level authorization?).
 
+## Desktop app (`sentinel serve`)
+
+Prefer a UI to the terminal? `sentinel serve` opens Sentinel in its own app window — a local, single-page app that drives the **same engine in-process** (no shelling out, no speed penalty):
+
+```bash
+sentinel serve
+```
+
+It binds to `127.0.0.1` only and gates its API with a per-launch token, so no other page on your machine can drive it. The window has a Welcome intro, an illustrated "Point Sentinel at a project" walkthrough, and working panels for Hunt (HAR import → dry-run → run → HackerOne-ready report), Evaluate, and Guard. Everything runs locally; nothing is sent anywhere except the targets you explicitly authorize.
+
 ## Demo
 
 ```console
