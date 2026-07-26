@@ -1,0 +1,31 @@
+{
+  "name": "Sentinel Kali",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "args": {
+      "USERNAME": "sentinel",
+      "USER_UID": "1000",
+      "USER_GID": "1000"
+    }
+  },
+  "remoteUser": "sentinel",
+  "runArgs": [
+    "--cap-add=NET_RAW",
+    "--cap-add=NET_ADMIN"
+  ],
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "containerEnv": {
+    "CGO_ENABLED": "1"
+  },
+  "postCreateCommand": "make bootstrap",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}

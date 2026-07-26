@@ -1,0 +1,21 @@
+#!/bin/sh
+set -eu
+
+gitleaks_bin="$(command -v gitleaks || true)"
+if [ -z "${gitleaks_bin}" ] && command -v go >/dev/null 2>&1; then
+  gitleaks_bin="$(go env GOPATH)/bin/gitleaks"
+fi
+if [ ! -x "${gitleaks_bin}" ]; then
+  echo "sentinel: gitleaks is required; run 'make bootstrap'" >&2
+  exit 1
+fi
+
+blocked="$(git diff --cached --name-only --diff-filter=ACMR | \
+  grep -Ei '(^|/)(engagements|captures|tool-output)/|[.](pcap|pcapng|cap|hccapx|hc22000|hashes)$' || true)"
+if [ -n "${blocked}" ]; then
+  echo "sentinel: refusing to commit sensitive engagement/tool artifacts:" >&2
+  echo "${blocked}" >&2
+  exit 1
+fi
+
+"${gitleaks_bin}" protect --staged --redact

@@ -1,0 +1,16 @@
+name: Example operator-supplied program
+platform: Example platform
+policy_url: https://example.invalid/security/policy
+enrolled: true
+scope:
+  allow:
+    - app.example.invalid
+  deny:
+    - admin.example.invalid
+automation:
+  allowed: false
+  max_requests_per_second: 0
+  max_concurrency: 0
+high_risk:
+  exploitation: false
+  social_engineering: false

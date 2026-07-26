@@ -15,3 +15,35 @@ coverage.out
 # OS cruft
 .DS_Store
 Thumbs.db
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Engagement state and audit data (sync out-of-band, preferably encrypted)
+.sentinel-data/
+engagements/
+audit*.jsonl
+
+# Captures, hashes, credentials, and cracking artifacts
+*.pcap
+*.pcapng
+*.cap
+*.hccapx
+*.hc22000
+*.hash
+*.hashes
+*.pot
+*.potfile
+
+# External tool output
+tool-output/
+nmap-output/
+skipfish-output/
+sqlmap-output/
+metasploit-output/
+set-output/
+
+# Fetched knowledge datasets are reproducible and may be very large
+knowledge-data/

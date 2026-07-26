@@ -1,0 +1,3 @@
+HPING 192.0.2.10 (eth0 192.0.2.10): S set, 40 headers + 0 data bytes
+len=46 ip=192.0.2.10 ttl=54 id=1234 sport=443 flags=SA seq=0 win=64240 rtt=12.4 ms
+

@@ -1,0 +1,19 @@
+[
+  {
+    "_source": {
+      "layers": {
+        "_ws.col": {
+          "_ws.col.Protocol": "HTTP"
+        },
+        "ip": {
+          "ip.src": "192.0.2.20",
+          "ip.dst": "192.0.2.10"
+        },
+        "http": {
+          "http.authorization": "Basic dXNlcjpwYXNz"
+        }
+      }
+    }
+  }
+]
+

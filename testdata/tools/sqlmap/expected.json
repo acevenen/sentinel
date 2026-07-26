@@ -1,0 +1,19 @@
+[
+  {
+    "id": "sqlmap:GET:id",
+    "title": "Confirmed SQL injection in parameter id",
+    "description": "AND boolean-based blind - WHERE or HAVING clause",
+    "severity": "high",
+    "cwe": "CWE-89",
+    "owasp": "A03:2021",
+    "target": "https://lab.local/item?id=1",
+    "evidence": "sqlmap confirmed boolean-based blind",
+    "metadata": {
+      "dbms": "PostgreSQL",
+      "location": "GET",
+      "parameter": "id",
+      "type": "boolean-based blind"
+    }
+  }
+]
+

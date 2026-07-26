@@ -1,0 +1,8 @@
+{
+  "version": "fixture",
+  "intents": [{"code":"PIT-I-16","title":"System Prompt Leak","description":"fixture","delivery":"direct","local":false}],
+  "techniques": [{"code":"PIT-T-42","title":"Tool Definition Injection","description":"fixture","delivery":"indirect","local":false}],
+  "evasions": [{"code":"PIT-E-59","title":"ANSI Escape Concealment","description":"fixture","delivery":"direct","local":false}],
+  "inputs": [{"code":"PIT-N-06","title":"Indirect Input","description":"fixture","delivery":"indirect","local":false}]
+}
+

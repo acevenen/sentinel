@@ -1,0 +1,2 @@
+[ high ] Missing anti-CSRF token | https://lab.local/account | form accepted without token
+

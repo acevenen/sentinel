@@ -1,0 +1,13 @@
+[
+  {
+    "id": "whatweb:1",
+    "title": "Web technology fingerprint",
+    "severity": "info",
+    "target": "https://lab.local",
+    "evidence": "HTTPServer[nginx], Title[Local Lab]",
+    "metadata": {
+      "status": "200 OK"
+    }
+  }
+]
+

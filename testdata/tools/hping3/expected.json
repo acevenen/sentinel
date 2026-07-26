@@ -1,0 +1,17 @@
+[
+  {
+    "id": "hping3:192.0.2.10:443",
+    "title": "hping3 response from 192.0.2.10:443",
+    "severity": "info",
+    "target": "192.0.2.10",
+    "evidence": "len=46 ip=192.0.2.10 ttl=54 id=1234 sport=443 flags=SA seq=0 win=64240 rtt=12.4 ms",
+    "metadata": {
+      "bytes": "46",
+      "flags": "SA",
+      "port": "443",
+      "rtt_ms": "12.4",
+      "ttl": "54"
+    }
+  }
+]
+

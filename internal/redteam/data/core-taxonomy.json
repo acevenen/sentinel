@@ -1,0 +1,33 @@
+{
+  "version": "1.6.1",
+  "source": "https://github.com/Arcanum-Sec/arc_pi_taxonomy",
+  "license": "CC BY 4.0",
+  "categories": [
+    {"id":"PIT-I-13","name":"Get Prompt Secret","axis":"attack-intent","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-I-16","name":"System Prompt Leak","axis":"attack-intent","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-I-19","name":"Sensitive Data Exfiltration","axis":"attack-intent","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-I-20","name":"Unauthorized Action Execution","axis":"attack-intent","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-09","name":"Gradient-Based Attacks","axis":"attack-technique","delivery":"direct","white_box_only":true,"source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-12","name":"Link Injection","axis":"attack-technique","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-23","name":"Russian Doll","axis":"attack-technique","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-31","name":"History Fabrication (Fake Assistant Turn)","axis":"attack-technique","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-42","name":"Tool-Definition Injection (MCP Tool Poisoning)","axis":"attack-technique","delivery":"indirect","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-46","name":"Agent Instruction-File Injection (Rules-File Backdoor)","axis":"attack-technique","delivery":"indirect","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-47","name":"Confused Deputy (Agent Authority Confusion)","axis":"attack-technique","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-53","name":"Tool-Call Spoofing","axis":"attack-technique","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-56","name":"Authority Impersonation","axis":"attack-technique","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-T-70","name":"Function-Call Parameter Smuggling","axis":"attack-technique","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-E-07","name":"Base64","axis":"attack-evasion","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-E-20","name":"Homoglyphs","axis":"attack-evasion","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-E-23","name":"Invisible Text","axis":"attack-evasion","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-E-54","name":"Bidirectional Text Override (Trojan Source)","axis":"attack-evasion","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-E-57","name":"Layered Encoding (Encoding Chains)","axis":"attack-evasion","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-E-59","name":"ANSI Escape Concealment (Terminal Codes)","axis":"attack-evasion","delivery":"direct","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-N-03","name":"Collaboration Platforms","axis":"attack-input","delivery":"indirect","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-N-04","name":"File Upload","axis":"attack-input","delivery":"both","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-N-06","name":"Indirect Input","axis":"attack-input","delivery":"indirect","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-N-09","name":"Productivity Applications","axis":"attack-input","delivery":"indirect","source":"Arcanum Prompt Injection Taxonomy"},
+    {"id":"PIT-N-11","name":"Supply Chain / Pipeline","axis":"attack-input","delivery":"indirect","source":"Arcanum Prompt Injection Taxonomy"}
+  ]
+}
+

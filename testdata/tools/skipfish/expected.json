@@ -1,0 +1,13 @@
+[
+  {
+    "id": "skipfish:1",
+    "title": "Missing anti-CSRF token",
+    "severity": "high",
+    "target": "https://lab.local/account",
+    "evidence": "form accepted without token",
+    "metadata": {
+      "source": "skipfish issue sample"
+    }
+  }
+]
+

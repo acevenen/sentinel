@@ -1,0 +1,15 @@
+[
+  {
+    "id": "metasploit:session:3",
+    "title": "meterpreter session 3 opened",
+    "description": "An operator-selected module opened a session on the authorized target.",
+    "severity": "critical",
+    "target": "192.0.2.10",
+    "evidence": "[*] Meterpreter session 3 opened (192.0.2.20:4444 -> 192.0.2.10:49158)",
+    "metadata": {
+      "session_id": "3",
+      "session_type": "meterpreter"
+    }
+  }
+]
+
