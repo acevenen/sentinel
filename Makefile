@@ -37,7 +37,7 @@ test-integration:
 	go test -tags=integration ./... -count=1
 
 fetch-knowledge:
-	@echo "Knowledge sources are introduced in Phase 6; nothing to fetch yet."
+	./scripts/fetch-knowledge.sh
 
 lint:
 	"$(GO_BIN)/golangci-lint" run

@@ -1,4 +1,4 @@
-// Package detect implements the guard's Half A: five deterministic detectors
+// Package detect implements the guard's Half A: deterministic detectors
 // that inspect every tool output before it re-enters the model's context.
 // Each detector is pattern-based and fast; together they carry the bulk of the
 // guard's demonstrable protection without an LLM in the loop.
@@ -11,10 +11,11 @@ import (
 
 // Finding is one detection from one detector over one input span.
 type Finding struct {
-	Detector string
-	Severity analyzer.Severity
-	Span     string // the offending text, trimmed for display
-	Reason   string
+	Detector   string
+	TaxonomyID string
+	Severity   analyzer.Severity
+	Span       string // the offending text, trimmed for display
+	Reason     string
 }
 
 // Input is a single unit of context to inspect — typically one tool output.
@@ -34,7 +35,7 @@ type Detector interface {
 	Inspect(in Input) []Finding
 }
 
-// All returns the standard five-detector set in a stable order.
+// All returns the standard detector set in a stable order.
 func All() []Detector {
 	return []Detector{
 		InjectionDetector{},
@@ -42,6 +43,7 @@ func All() []Detector {
 		ScopeDetector{},
 		ObfuscationDetector{},
 		ProvenanceDetector{},
+		TaxonomyDetector{},
 	}
 }
 

@@ -26,11 +26,12 @@ const (
 
 // Definition maps a stage to capabilities, preferred tools, and human role.
 type Definition struct {
-	Stage         Stage              `json:"stage"`
-	Capabilities  []tools.Capability `json:"capabilities"`
-	Tools         []string           `json:"tools"`
-	Checklist     []string           `json:"checklist"`
-	HumanDecision bool               `json:"human_decision"`
+	Stage         Stage               `json:"stage"`
+	Capabilities  []tools.Capability  `json:"capabilities"`
+	Tools         []string            `json:"tools"`
+	Knowledge     []knowledge.Purpose `json:"knowledge,omitempty"`
+	Checklist     []string            `json:"checklist"`
+	HumanDecision bool                `json:"human_decision"`
 }
 
 // DefaultDefinitions is the ordered methodology state machine.
@@ -61,6 +62,7 @@ var DefaultDefinitions = []Definition{
 	},
 	{
 		Stage:         StageCloudSSRF,
+		Knowledge:     []knowledge.Purpose{knowledge.PurposeSSRFMetadata},
 		Checklist:     []string{"identify URL-fetching features", "select provider dictionary", "confirm safe evidence boundary"},
 		HumanDecision: true,
 	},
@@ -71,6 +73,13 @@ var DefaultDefinitions = []Definition{
 		Checklist:     []string{"verify confirmed issue", "verify written authorization", "obtain per-action confirmation"},
 		HumanDecision: true,
 	},
+}
+
+// CloudMetadataOptions returns the factual provider dictionary used by the
+// Cloud/SSRF stage. Sending any selected endpoint remains a human-approved,
+// scope-gated adapter responsibility.
+func CloudMetadataOptions() ([]knowledge.MetadataEndpoint, error) {
+	return knowledge.MetadataEndpoints()
 }
 
 // RunState is portable engagement progress.

@@ -28,19 +28,20 @@ var (
 // invisibleRune pairs a control code point with a human label. Declared with
 // numeric constants so the source file itself stays free of invisible runes.
 type invisibleRune struct {
-	r     rune
-	label string
+	r          rune
+	label      string
+	taxonomyID string
 }
 
 var invisibleRunes = []invisibleRune{
-	{0x200b, "zero-width space"},
-	{0x200c, "zero-width non-joiner"},
-	{0x200d, "zero-width joiner"},
-	{0xfeff, "zero-width no-break space"},
-	{0x202e, "right-to-left override"},
-	{0x2066, "left-to-right isolate"},
-	{0x2067, "right-to-left isolate"},
-	{0x2069, "pop directional isolate"},
+	{0x200b, "zero-width space", "PIT-E-23"},
+	{0x200c, "zero-width non-joiner", "PIT-E-23"},
+	{0x200d, "zero-width joiner", "PIT-E-23"},
+	{0xfeff, "zero-width no-break space", "PIT-E-23"},
+	{0x202e, "right-to-left override", "PIT-E-54"},
+	{0x2066, "left-to-right isolate", "PIT-E-54"},
+	{0x2067, "right-to-left isolate", "PIT-E-54"},
+	{0x2069, "pop directional isolate", "PIT-E-54"},
 }
 
 // Inspect scans for encoded blobs, invisible characters, and homoglyphs, and
@@ -51,20 +52,22 @@ func (ObfuscationDetector) Inspect(in Input) []Finding {
 	for _, ir := range invisibleRunes {
 		if strings.ContainsRune(in.Text, ir.r) {
 			out = append(out, Finding{
-				Detector: "obfuscation",
-				Severity: analyzer.SeverityHigh,
-				Span:     ir.label,
-				Reason:   "content contains an invisible or bidirectional-control character",
+				Detector:   "obfuscation",
+				TaxonomyID: ir.taxonomyID,
+				Severity:   analyzer.SeverityHigh,
+				Span:       ir.label,
+				Reason:     "content contains an invisible or bidirectional-control character",
 			})
 		}
 	}
 
 	if mixedScriptHomoglyph(in.Text) {
 		out = append(out, Finding{
-			Detector: "obfuscation",
-			Severity: analyzer.SeverityMedium,
-			Span:     "mixed-script text",
-			Reason:   "content mixes Latin with confusable non-Latin homoglyphs",
+			Detector:   "obfuscation",
+			TaxonomyID: "PIT-E-20",
+			Severity:   analyzer.SeverityMedium,
+			Span:       "mixed-script text",
+			Reason:     "content mixes Latin with confusable non-Latin homoglyphs",
 		})
 	}
 
@@ -83,10 +86,11 @@ func (ObfuscationDetector) Inspect(in Input) []Finding {
 			continue
 		}
 		out = append(out, Finding{
-			Detector: "obfuscation",
-			Severity: analyzer.SeverityHigh,
-			Span:     snippet(span),
-			Reason:   "content contains a base64 blob that decodes to readable text",
+			Detector:   "obfuscation",
+			TaxonomyID: "PIT-E-07",
+			Severity:   analyzer.SeverityHigh,
+			Span:       snippet(span),
+			Reason:     "content contains a base64 blob that decodes to readable text",
 		})
 		// Rescan the decoded text one level deep so a hidden directive still
 		// trips injection/exfil.

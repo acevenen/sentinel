@@ -67,3 +67,17 @@ platform expansion brief.
   unit tests and narrow validator suggestions.
 - Replaced the Recon scaffold with the real guarded nmap adapter, normalized
   JSON report, audit trail, exact dry-run argv, and methodology state update.
+
+## Phase 6 — knowledge base and shared AI red-team taxonomy
+
+- Added a typed, fetch-on-demand SecLists catalog plus embedded HUNT-style
+  parameter hypotheses and a vendor-sourced six-provider cloud metadata
+  dictionary used by the methodology engine.
+- Added a CC BY 4.0-attributed, prompt-free Arcanum taxonomy loader shared by
+  `guard` and `ai-redteam`, including black-box/local applicability.
+- Added taxonomy-derived guard detectors for forged conversation turns, tool
+  poisoning/spoofing, instruction-file injection, authority impersonation,
+  parameter smuggling, and ANSI concealment.
+- Replaced the AI red-team scaffold with a scope-gated, audited HTTP runner
+  that executes only operator-supplied and explicitly approved suite content.
+- Documented adopted and skipped public sources in `docs/SOURCES.md`.

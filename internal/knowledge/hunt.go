@@ -1,8 +1,11 @@
 package knowledge
 
 import (
+	_ "embed"
+	"encoding/json"
 	"sort"
 	"strings"
+	"sync"
 	"unicode"
 )
 
@@ -27,40 +30,22 @@ type ParameterHypothesis struct {
 	Reason    string               `json:"reason"`
 }
 
-var huntMap = map[string][]VulnerabilityClass{
-	"account":     {ClassIDOR},
-	"callback":    {ClassSSRF, ClassXSS},
-	"continue":    {ClassSSRF},
-	"dest":        {ClassSSRF},
-	"destination": {ClassSSRF},
-	"document":    {ClassLFI, ClassRFI},
-	"file":        {ClassLFI, ClassRFI, ClassUpload},
-	"filename":    {ClassLFI, ClassUpload},
-	"folder":      {ClassLFI},
-	"html":        {ClassXSS},
-	"id":          {ClassIDOR, ClassSQLI},
-	"image":       {ClassSSRF, ClassUpload},
-	"item":        {ClassIDOR, ClassSQLI},
-	"key":         {ClassIDOR, ClassSQLI},
-	"lang":        {ClassLFI},
-	"next":        {ClassSSRF},
-	"page":        {ClassLFI, ClassXSS},
-	"path":        {ClassLFI, ClassRFI},
-	"query":       {ClassSQLI, ClassXSS},
-	"redirect":    {ClassSSRF},
-	"reference":   {ClassIDOR, ClassSQLI},
-	"return":      {ClassSSRF},
-	"search":      {ClassSQLI, ClassXSS},
-	"template":    {ClassLFI, ClassXSS},
-	"token":       {ClassCSRF, ClassIDOR},
-	"url":         {ClassSSRF},
-	"user":        {ClassIDOR, ClassSQLI},
-	"userid":      {ClassIDOR, ClassSQLI},
-}
+//go:embed data/hunt-parameters.json
+var embeddedHUNT []byte
+
+var (
+	huntOnce sync.Once
+	huntMap  map[string][]VulnerabilityClass
+)
 
 // LookupParameter applies HUNT-style name heuristics. It only prioritizes
 // manual/operator-approved testing and never declares a finding.
 func LookupParameter(parameter string) ParameterHypothesis {
+	huntOnce.Do(func() {
+		if err := json.Unmarshal(embeddedHUNT, &huntMap); err != nil {
+			panic("invalid embedded HUNT parameter map: " + err.Error())
+		}
+	})
 	normalized := normalizeParameter(parameter)
 	classes := append([]VulnerabilityClass(nil), huntMap[normalized]...)
 	if len(classes) == 0 {

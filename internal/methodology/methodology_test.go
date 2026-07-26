@@ -56,3 +56,17 @@ func TestSuggestParameters(t *testing.T) {
 		t.Fatalf("SuggestParameters() = %#v, want %#v", suggestions, want)
 	}
 }
+
+func TestCloudSSRFUsesMetadataCatalog(t *testing.T) {
+	definition, ok := DefinitionFor(StageCloudSSRF)
+	if !ok || len(definition.Knowledge) != 1 || definition.Knowledge[0] != knowledge.PurposeSSRFMetadata {
+		t.Fatalf("cloud definition = %+v", definition)
+	}
+	endpoints, err := CloudMetadataOptions()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(endpoints) != 6 {
+		t.Fatalf("metadata endpoints = %d, want 6", len(endpoints))
+	}
+}

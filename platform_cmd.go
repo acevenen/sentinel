@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/acevenen/sentinel/internal/config"
 	"github.com/acevenen/sentinel/internal/engagement"
 	"github.com/acevenen/sentinel/internal/methodology"
+	"github.com/acevenen/sentinel/internal/redteam"
 	"github.com/acevenen/sentinel/internal/tools"
 	"github.com/acevenen/sentinel/internal/tools/nmap"
 )
@@ -38,10 +40,73 @@ func newPlatformCommands() []*cobra.Command {
 		newGuardedStubCommand("creds <artifact>", "Audit operator-supplied credential material offline", "hashcat", false, false, true),
 		newGuardedStubCommand("wireless <bssid>", "Run an authorized wireless assessment", "aircrack-ng", true, true, false),
 		newGuardedStubCommand("se <target>", "Run a sanctioned social-engineering assessment", "set", true, true, false),
-		newGuardedStubCommand("ai-redteam <target>", "Evaluate an in-scope LLM application against the shared taxonomy", "ai-redteam", true, false, false),
+		newAIRedTeamCmd(),
 		newEngagementCmd(),
 		newToolsCmd(),
 	}
+}
+
+func newAIRedTeamCmd() *cobra.Command {
+	var (
+		opts          activeCommandOptions
+		suitePath     string
+		taxonomyPath  string
+		targetMode    string
+		approveProbes bool
+		timeout       time.Duration
+	)
+	cmd := &cobra.Command{
+		Use:   "ai-redteam <target>",
+		Short: "Run an approved taxonomy-structured suite against an in-scope LLM app",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			suite, err := redteam.LoadSuiteFile(suitePath)
+			if err != nil {
+				return err
+			}
+			taxonomy, err := redteam.Core()
+			if err != nil {
+				return err
+			}
+			if taxonomyPath != "" {
+				data, readErr := os.ReadFile(taxonomyPath)
+				if readErr != nil {
+					return readErr
+				}
+				taxonomy, err = redteam.Load(data)
+				if err != nil {
+					return err
+				}
+			}
+			guardrail, err := platformGuardrail(opts)
+			if err != nil {
+				return err
+			}
+			cfg := config.LoadOperational()
+			runner := redteam.Runner{
+				Guard:    guardrail,
+				Auditor:  &engagement.AuditLog{Path: cfg.AuditLog},
+				Client:   &http.Client{Timeout: timeout},
+				Taxonomy: taxonomy,
+			}
+			result, err := runner.Run(cmd.Context(), suite, redteam.RunOptions{
+				Target: args[0], EngagementID: opts.engagementID, Operator: opts.operator,
+				Mode: redteam.TargetMode(targetMode), Approved: approveProbes, DryRun: opts.dryRun,
+			})
+			if err != nil {
+				return err
+			}
+			return writeJSON(opts.out, result)
+		},
+	}
+	addActiveFlags(cmd, &opts)
+	cmd.Flags().StringVar(&suitePath, "suite", "", "operator-reviewed probe suite JSON (required)")
+	cmd.Flags().StringVar(&taxonomyPath, "taxonomy", "", "optional official Arcanum taxonomy JSON")
+	cmd.Flags().StringVar(&targetMode, "target-mode", string(redteam.TargetBlackBox), "target access: black-box or local")
+	cmd.Flags().BoolVar(&approveProbes, "approve-probes", false, "confirm the operator reviewed and approved every suite probe")
+	cmd.Flags().DurationVar(&timeout, "timeout", 30*time.Second, "per-request HTTP timeout")
+	_ = cmd.MarkFlagRequired("suite")
+	return cmd
 }
 
 func newReconCmd() *cobra.Command {
