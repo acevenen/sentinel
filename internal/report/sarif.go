@@ -41,7 +41,7 @@ type sarifResult struct {
 	RuleID    string          `json:"ruleId"`
 	Level     string          `json:"level"`
 	Message   sarifMessage    `json:"message"`
-	Locations []sarifLocation `json:"locations"`
+	Locations []sarifLocation `json:"locations,omitempty"`
 }
 
 type sarifMessage struct {
@@ -54,7 +54,7 @@ type sarifLocation struct {
 
 type sarifPhysicalLocation struct {
 	ArtifactLocation sarifArtifactLocation `json:"artifactLocation"`
-	Region           sarifRegion           `json:"region"`
+	Region           sarifRegion           `json:"region,omitempty"`
 }
 
 type sarifArtifactLocation struct {
@@ -62,7 +62,7 @@ type sarifArtifactLocation struct {
 }
 
 type sarifRegion struct {
-	StartLine int `json:"startLine"`
+	StartLine int `json:"startLine,omitempty"`
 }
 
 // severityToSARIFLevel maps Sentinel severities onto SARIF levels.

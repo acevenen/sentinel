@@ -128,6 +128,40 @@ func (l *AuditLog) Verify() error {
 	return nil
 }
 
+// Events verifies the hash chain and returns a copy of events for one
+// engagement. An empty engagementID returns all events.
+func (l *AuditLog) Events(engagementID string) ([]tools.AuditEvent, error) {
+	if err := l.Verify(); err != nil {
+		return nil, err
+	}
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	file, err := os.Open(l.Path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("opening audit log: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+	var events []tools.AuditEvent
+	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+	for scanner.Scan() {
+		var record auditRecord
+		if err := json.Unmarshal(scanner.Bytes(), &record); err != nil {
+			return nil, fmt.Errorf("decoding audit event: %w", err)
+		}
+		if engagementID == "" || record.EngagementID == engagementID {
+			events = append(events, record.AuditEvent)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("reading audit log: %w", err)
+	}
+	return events, nil
+}
+
 func (l *AuditLog) lastHash() (string, error) {
 	file, err := os.Open(l.Path)
 	if errors.Is(err, os.ErrNotExist) {

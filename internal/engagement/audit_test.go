@@ -57,3 +57,21 @@ func TestAuditLogDetectsTampering(t *testing.T) {
 		t.Fatal("Verify() succeeded after audit log tampering")
 	}
 }
+
+func TestAuditLogEventsFiltersEngagement(t *testing.T) {
+	log := &AuditLog{Path: filepath.Join(t.TempDir(), "audit.jsonl")}
+	for _, id := range []string{"one", "two", "one"} {
+		if err := log.Record(context.Background(), tools.AuditEvent{
+			EngagementID: id, Target: "127.0.0.1", Tool: "nmap",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	events, err := log.Events("one")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 2 {
+		t.Fatalf("events = %d, want 2", len(events))
+	}
+}

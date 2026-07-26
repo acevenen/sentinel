@@ -116,3 +116,17 @@ platform expansion brief.
 - Documented local/public lab boundaries and recorded the local LLM E2E sample.
   The Juice Shop sample slot truthfully records that Docker execution was not
   possible on the implementation host rather than inventing evidence.
+
+## Phase 9 — reporting and release polish
+
+- Added verified engagement reports in Markdown, JSON, and SARIF 2.1.0 with
+  scope, methodology progress, audit timeline, normalized findings,
+  CWE/OWASP tags, evidence artifacts, and remediation.
+- Added `sentinel engagement report`; report generation verifies the complete
+  audit hash chain and fails on tampering.
+- Replaced the remaining Phase 1 CLI scaffolds with the real guarded Skipfish,
+  SQLMap, Metasploit, Hashcat, Aircrack-ng, SET, hping3, Kali utility, and
+  tshark adapters. Added explicit intrusive confirmations and a `traffic`
+  command for passive/live tshark modes.
+- Reworked the README and added architecture, safety, command, lab, source,
+  methodology, orchestrator, development, and tool documentation.

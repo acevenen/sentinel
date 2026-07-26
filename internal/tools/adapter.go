@@ -33,6 +33,7 @@ type Finding struct {
 	OWASP       string            `json:"owasp,omitempty"`
 	Target      string            `json:"target,omitempty"`
 	Evidence    string            `json:"evidence,omitempty"`
+	Remediation string            `json:"remediation,omitempty"`
 	Metadata    map[string]string `json:"metadata,omitempty"`
 }
 

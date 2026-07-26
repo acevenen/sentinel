@@ -84,12 +84,13 @@ func CloudMetadataOptions() ([]knowledge.MetadataEndpoint, error) {
 
 // RunState is portable engagement progress.
 type RunState struct {
-	EngagementID string          `json:"engagement_id"`
-	Current      Stage           `json:"current_stage,omitempty"`
-	Completed    []Stage         `json:"completed_stages,omitempty"`
-	Findings     []tools.Finding `json:"findings,omitempty"`
-	ProposedNext []Stage         `json:"proposed_next,omitempty"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	EngagementID string           `json:"engagement_id"`
+	Current      Stage            `json:"current_stage,omitempty"`
+	Completed    []Stage          `json:"completed_stages,omitempty"`
+	Findings     []tools.Finding  `json:"findings,omitempty"`
+	Artifacts    []tools.Artifact `json:"artifacts,omitempty"`
+	ProposedNext []Stage          `json:"proposed_next,omitempty"`
+	UpdatedAt    time.Time        `json:"updated_at"`
 }
 
 // StageRunner executes the tools selected for one already-authorized stage.

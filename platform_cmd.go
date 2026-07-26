@@ -20,7 +20,10 @@ import (
 	"github.com/acevenen/sentinel/internal/methodology"
 	"github.com/acevenen/sentinel/internal/orchestrator"
 	"github.com/acevenen/sentinel/internal/redteam"
+	"github.com/acevenen/sentinel/internal/report"
 	"github.com/acevenen/sentinel/internal/tools"
+	"github.com/acevenen/sentinel/internal/tools/hping"
+	"github.com/acevenen/sentinel/internal/tools/kali"
 	"github.com/acevenen/sentinel/internal/tools/nmap"
 )
 
@@ -37,11 +40,12 @@ type activeCommandOptions struct {
 func newPlatformCommands() []*cobra.Command {
 	return []*cobra.Command{
 		newReconCmd(),
-		newGuardedStubCommand("test <target>", "Run authorized web application testing", "web-test", true, false, false),
-		newGuardedStubCommand("exploit <target>", "Run an operator-selected exploit in an authorized engagement", "metasploit", true, true, false),
-		newGuardedStubCommand("creds <artifact>", "Audit operator-supplied credential material offline", "hashcat", false, false, true),
-		newGuardedStubCommand("wireless <bssid>", "Run an authorized wireless assessment", "aircrack-ng", true, true, false),
-		newGuardedStubCommand("se <target>", "Run a sanctioned social-engineering assessment", "set", true, true, false),
+		newWebTestCmd(),
+		newExploitCmd(),
+		newCredsCmd(),
+		newWirelessCmd(),
+		newSocialEngineeringCmd(),
+		newTrafficCmd(),
 		newAIRedTeamCmd(),
 		newOrchestrateCmd(),
 		newCTFCmd(),
@@ -213,7 +217,8 @@ func newAIRedTeamCmd() *cobra.Command {
 func newReconCmd() *cobra.Command {
 	var (
 		opts     activeCommandOptions
-		nmapArgs []string
+		toolName string
+		toolArgs []string
 	)
 	cmd := &cobra.Command{
 		Use:   "recon <target>",
@@ -226,14 +231,24 @@ func newReconCmd() *cobra.Command {
 			}
 			cfg := config.LoadOperational()
 			auditor := &engagement.AuditLog{Path: cfg.AuditLog}
-			adapter := nmap.New(guardrail, auditor, nil)
+			var adapter tools.Tool
+			switch toolName {
+			case "nmap":
+				adapter = nmap.New(guardrail, auditor, nil)
+			case "hping3":
+				adapter = hping.New(guardrail, auditor, nil)
+			case "kali-utils":
+				adapter = kali.New(guardrail, auditor, nil)
+			default:
+				return fmt.Errorf("unsupported recon tool %q (want nmap, hping3, or kali-utils)", toolName)
+			}
 			result, err := adapter.Run(cmd.Context(), tools.Request{
 				Action: authz.Action{
 					Operator:     opts.operator,
 					EngagementID: opts.engagementID,
 				},
 				Target: args[0],
-				Args:   nmapArgs,
+				Args:   toolArgs,
 				DryRun: opts.dryRun,
 			})
 			if err != nil {
@@ -267,6 +282,7 @@ func newReconCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				state.Artifacts = append(state.Artifacts, result.Artifacts...)
 				if err := store.Save(state); err != nil {
 					return err
 				}
@@ -277,55 +293,8 @@ func newReconCmd() *cobra.Command {
 		},
 	}
 	addActiveFlags(cmd, &opts)
-	cmd.Flags().StringSliceVar(&nmapArgs, "nmap-arg", nil, "operator-selected nmap argv (repeatable; no shell interpolation)")
-	return cmd
-}
-
-func newGuardedStubCommand(use, short, tool string, active, intrusive, attestation bool) *cobra.Command {
-	var opts activeCommandOptions
-	cmd := &cobra.Command{
-		Use:   use,
-		Short: short,
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			action := authz.Action{
-				Operator:            opts.operator,
-				EngagementID:        opts.engagementID,
-				Target:              args[0],
-				Tool:                tool,
-				Active:              active,
-				Intrusive:           intrusive,
-				RequiresAttestation: attestation,
-			}
-			if err := authorizePlatformAction(cmd, opts, action); err != nil {
-				return err
-			}
-			if active && !opts.dryRun {
-				if err := tools.RequireKaliForActive(); err != nil {
-					return err
-				}
-			}
-
-			plan := struct {
-				Phase   int          `json:"phase"`
-				DryRun  bool         `json:"dry_run"`
-				Action  authz.Action `json:"action"`
-				Status  string       `json:"status"`
-				Warning string       `json:"warning"`
-			}{
-				Phase:   1,
-				DryRun:  opts.dryRun,
-				Action:  action,
-				Status:  "authorized; adapter scaffold only",
-				Warning: "no external command is enabled in Phase 1",
-			}
-			if opts.dryRun {
-				return writeJSON(opts.out, plan)
-			}
-			return fmt.Errorf("%s adapter is scaffolded but intentionally disabled until its guarded implementation phase; use --dry-run to inspect the authorized plan", tool)
-		},
-	}
-	addActiveFlags(cmd, &opts)
+	cmd.Flags().StringVar(&toolName, "tool", "nmap", "guarded adapter: nmap, hping3, or kali-utils")
+	cmd.Flags().StringSliceVar(&toolArgs, "tool-arg", nil, "operator-selected direct argv (repeatable; no shell interpolation)")
 	return cmd
 }
 
@@ -337,17 +306,6 @@ func addActiveFlags(cmd *cobra.Command, opts *activeCommandOptions) {
 	cmd.Flags().StringVar(&opts.out, "out", "", "write structured output to a file instead of stdout")
 	cmd.Flags().BoolVar(&opts.authorized, "authorized", false, "assert that the operator is authorized for this active action")
 	cmd.Flags().StringVar(&opts.operator, "operator", defaultOperator(), "operator identity recorded in authorization and audit events")
-}
-
-func authorizePlatformAction(cmd *cobra.Command, opts activeCommandOptions, action authz.Action) error {
-	guardrail, err := platformGuardrail(opts)
-	if err != nil {
-		return err
-	}
-	if err := guardrail.Authorize(cmd.Context(), action); err != nil {
-		return fmt.Errorf("authorization refused: %w", err)
-	}
-	return nil
 }
 
 func platformGuardrail(opts activeCommandOptions) (authz.Guardrail, error) {
@@ -407,7 +365,51 @@ func newEngagementCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 	}
 	cmd.PersistentFlags().StringVar(&out, "out", "", "write structured output to a file instead of stdout")
-	cmd.AddCommand(newEngagementCreateCmd(&out), newEngagementListCmd(&out), newEngagementScopeCmd(&out))
+	cmd.AddCommand(
+		newEngagementCreateCmd(&out),
+		newEngagementListCmd(&out),
+		newEngagementScopeCmd(&out),
+		newEngagementReportCmd(&out),
+	)
+	return cmd
+}
+
+func newEngagementReportCmd(out *string) *cobra.Command {
+	var (
+		id     string
+		format string
+	)
+	cmd := &cobra.Command{
+		Use:   "report",
+		Short: "Render a verified multi-format engagement report",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if id == "" {
+				return errors.New("--engagement is required")
+			}
+			cfg := config.LoadOperational()
+			record, err := (engagement.FileStore{Dir: cfg.EngagementDir}).Get(id)
+			if err != nil {
+				return err
+			}
+			state, err := (methodology.FileStateStore{Dir: cfg.StateDir}).Load(id)
+			if errors.Is(err, os.ErrNotExist) {
+				state = methodology.RunState{EngagementID: id}
+			} else if err != nil {
+				return err
+			}
+			events, err := (&engagement.AuditLog{Path: cfg.AuditLog}).Events(id)
+			if err != nil {
+				return err
+			}
+			value := report.NewEngagement(version, record, state, events)
+			return writeReport(*out, func(writer io.Writer) error {
+				return report.RenderEngagement(writer, format, value)
+			})
+		},
+	}
+	cmd.Flags().StringVar(&id, "engagement", "", "engagement record identifier (required)")
+	cmd.Flags().StringVar(&format, "format", report.EngagementFormatMarkdown, "report format: markdown, json, or sarif")
 	return cmd
 }
 
