@@ -19,6 +19,11 @@ import (
 // FileName is the optional per-repository config file.
 const FileName = ".sentinel.yaml"
 
+const (
+	defaultEngagementDir = ".sentinel-data/engagements"
+	defaultAuditLog      = ".sentinel-data/audit.jsonl"
+)
+
 // DefaultModel is the model used when none is configured.
 const DefaultModel = "claude-sonnet-4-5"
 
@@ -130,4 +135,33 @@ func (c *Config) Validate() error {
 func (c *Config) MinSeverity() analyzer.Severity {
 	sev, _ := analyzer.ParseSeverity(c.Severity)
 	return sev
+}
+
+// OperationalConfig contains local platform paths and global safety controls.
+// It is separate from scan configuration so existing scan precedence and
+// validation remain backwards compatible.
+type OperationalConfig struct {
+	EngagementDir string
+	AuditLog      string
+	KillSwitch    bool
+}
+
+// LoadOperational reads environment-only operational settings. Engagement
+// records themselves carry scope, rate, and concurrency policy.
+func LoadOperational() OperationalConfig {
+	cfg := OperationalConfig{
+		EngagementDir: defaultEngagementDir,
+		AuditLog:      defaultAuditLog,
+	}
+	if value := strings.TrimSpace(os.Getenv("SENTINEL_ENGAGEMENT_DIR")); value != "" {
+		cfg.EngagementDir = value
+	}
+	if value := strings.TrimSpace(os.Getenv("SENTINEL_AUDIT_LOG")); value != "" {
+		cfg.AuditLog = value
+	}
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("SENTINEL_KILL_SWITCH"))) {
+	case "1", "true", "yes", "on", "stop":
+		cfg.KillSwitch = true
+	}
+	return cfg
 }

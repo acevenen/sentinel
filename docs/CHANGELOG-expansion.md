@@ -12,3 +12,15 @@ platform expansion brief.
   test, lint, formatting, and knowledge retrieval.
 - Added environment documentation, repository-managed Git hooks, secret
   scanning, and ignores for sensitive engagement/tool artifacts.
+
+## Phase 1 — target architecture
+
+- Added the central `internal/authz` guardrail with deny-first scope matching,
+  passive defaults, explicit authorization, kill-switch support, and stronger
+  engagement/attestation requirements for intrusive actions.
+- Added portable JSON engagement records and the create/list/scope CLI.
+- Added common adapter/result models, registry, methodology stages, knowledge
+  catalog types, shared AI red-team taxonomy types, and orchestrator contracts.
+- Added guarded command scaffolds for recon, web testing, exploitation,
+  credential auditing, wireless, social engineering, AI red teaming, and tool
+  diagnostics. No external active capability is enabled in this phase.

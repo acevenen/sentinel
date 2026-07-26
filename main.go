@@ -59,12 +59,13 @@ func main() {
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "sentinel",
-		Short:         "AI-powered defensive security code review",
-		Long:          "Sentinel scans a codebase for security vulnerabilities and code quality issues using the Anthropic API.",
+		Short:         "Authorization-first security operations platform",
+		Long:          "Sentinel combines defensive code and agent security with scope-locked, human-approved security testing.",
 		SilenceUsage:  true,
 		SilenceErrors: false,
 	}
 	root.AddCommand(newScanCmd(), newGuardCmd(), newEvaluateCmd(), newHuntCmd(), newServeCmd(), newVersionCmd())
+	root.AddCommand(newPlatformCommands()...)
 	return root
 }
 

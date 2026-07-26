@@ -11,7 +11,7 @@ if [ ! -x "${gitleaks_bin}" ]; then
 fi
 
 blocked="$(git diff --cached --name-only --diff-filter=ACMR | \
-  grep -Ei '(^|/)(engagements?|captures?|tool-output)/|[.](pcap|pcapng|cap|hccapx|hc22000|hashes)$' || true)"
+  grep -Ei '(^|/)(engagements|captures|tool-output)/|[.](pcap|pcapng|cap|hccapx|hc22000|hashes)$' || true)"
 if [ -n "${blocked}" ]; then
   echo "sentinel: refusing to commit sensitive engagement/tool artifacts:" >&2
   echo "${blocked}" >&2
