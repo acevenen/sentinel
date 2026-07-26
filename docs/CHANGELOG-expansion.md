@@ -57,3 +57,13 @@ platform expansion brief.
   packet/capture modes, and Metasploit resource target validation.
 - Added canned output and golden normalized-finding tests for every adapter;
   no unit test launches a live security tool.
+
+## Phase 5 — methodology engine
+
+- Implemented the ordered Recon → Mapping → Tactical Fuzzing → Auth/Session/
+  Logic/Transport → Cloud/SSRF → Exploitation/Post state machine.
+- Added atomic owner-only engagement state persistence and next-stage proposals.
+- Added HUNT-style parameter-to-vulnerability hypotheses with deterministic
+  unit tests and narrow validator suggestions.
+- Replaced the Recon scaffold with the real guarded nmap adapter, normalized
+  JSON report, audit trail, exact dry-run argv, and methodology state update.

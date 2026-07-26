@@ -17,6 +17,26 @@ type Guardrail interface {
 	Authorize(context.Context, Action) error
 }
 
+// Chain requires every guardrail to authorize an action. It is used when an
+// engagement scope and a narrower command-line scope must both match.
+type Chain []Guardrail
+
+// Authorize implements Guardrail.
+func (c Chain) Authorize(ctx context.Context, action Action) error {
+	if len(c) == 0 {
+		return errors.New("authorization chain is empty")
+	}
+	for _, guardrail := range c {
+		if guardrail == nil {
+			return errors.New("authorization chain contains a nil guardrail")
+		}
+		if err := guardrail.Authorize(ctx, action); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Action describes one proposed operation before it reaches a tool adapter.
 type Action struct {
 	Operator            string   `json:"operator"`

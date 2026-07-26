@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,7 +15,9 @@ import (
 	"github.com/acevenen/sentinel/internal/authz"
 	"github.com/acevenen/sentinel/internal/config"
 	"github.com/acevenen/sentinel/internal/engagement"
+	"github.com/acevenen/sentinel/internal/methodology"
 	"github.com/acevenen/sentinel/internal/tools"
+	"github.com/acevenen/sentinel/internal/tools/nmap"
 )
 
 type activeCommandOptions struct {
@@ -29,7 +32,7 @@ type activeCommandOptions struct {
 
 func newPlatformCommands() []*cobra.Command {
 	return []*cobra.Command{
-		newGuardedStubCommand("recon <target>", "Run authorized asset and service reconnaissance", "nmap", true, false, false),
+		newReconCmd(),
 		newGuardedStubCommand("test <target>", "Run authorized web application testing", "web-test", true, false, false),
 		newGuardedStubCommand("exploit <target>", "Run an operator-selected exploit in an authorized engagement", "metasploit", true, true, false),
 		newGuardedStubCommand("creds <artifact>", "Audit operator-supplied credential material offline", "hashcat", false, false, true),
@@ -39,6 +42,77 @@ func newPlatformCommands() []*cobra.Command {
 		newEngagementCmd(),
 		newToolsCmd(),
 	}
+}
+
+func newReconCmd() *cobra.Command {
+	var (
+		opts     activeCommandOptions
+		nmapArgs []string
+	)
+	cmd := &cobra.Command{
+		Use:   "recon <target>",
+		Short: "Run authorized asset and service reconnaissance",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			guardrail, err := platformGuardrail(opts)
+			if err != nil {
+				return err
+			}
+			cfg := config.LoadOperational()
+			auditor := &engagement.AuditLog{Path: cfg.AuditLog}
+			adapter := nmap.New(guardrail, auditor, nil)
+			result, err := adapter.Run(cmd.Context(), tools.Request{
+				Action: authz.Action{
+					Operator:     opts.operator,
+					EngagementID: opts.engagementID,
+				},
+				Target: args[0],
+				Args:   nmapArgs,
+				DryRun: opts.dryRun,
+			})
+			if err != nil {
+				return err
+			}
+
+			report := struct {
+				Stage        methodology.Stage     `json:"stage"`
+				ToolResult   tools.Result          `json:"tool_result"`
+				Methodology  *methodology.RunState `json:"methodology_state,omitempty"`
+				ProposedNext []methodology.Stage   `json:"proposed_next"`
+			}{
+				Stage:        methodology.StageRecon,
+				ToolResult:   result,
+				ProposedNext: []methodology.Stage{methodology.StageApplicationMapping},
+			}
+			if !opts.dryRun && opts.engagementID != "" {
+				store := methodology.FileStateStore{Dir: cfg.StateDir}
+				state, loadErr := store.Load(opts.engagementID)
+				if errors.Is(loadErr, os.ErrNotExist) {
+					state = methodology.RunState{EngagementID: opts.engagementID}
+				} else if loadErr != nil {
+					return loadErr
+				}
+				workflow := methodology.Workflow{Runner: methodology.StageRunnerFunc(
+					func(context.Context, methodology.Stage, methodology.RunState) ([]tools.Finding, error) {
+						return result.Findings, nil
+					},
+				)}
+				state, err = workflow.RunStage(cmd.Context(), state, methodology.StageRecon)
+				if err != nil {
+					return err
+				}
+				if err := store.Save(state); err != nil {
+					return err
+				}
+				report.Methodology = &state
+				report.ProposedNext = state.ProposedNext
+			}
+			return writeJSON(opts.out, report)
+		},
+	}
+	addActiveFlags(cmd, &opts)
+	cmd.Flags().StringSliceVar(&nmapArgs, "nmap-arg", nil, "operator-selected nmap argv (repeatable; no shell interpolation)")
+	return cmd
 }
 
 func newGuardedStubCommand(use, short, tool string, active, intrusive, attestation bool) *cobra.Command {
@@ -100,43 +174,55 @@ func addActiveFlags(cmd *cobra.Command, opts *activeCommandOptions) {
 }
 
 func authorizePlatformAction(cmd *cobra.Command, opts activeCommandOptions, action authz.Action) error {
+	guardrail, err := platformGuardrail(opts)
+	if err != nil {
+		return err
+	}
+	if err := guardrail.Authorize(cmd.Context(), action); err != nil {
+		return fmt.Errorf("authorization refused: %w", err)
+	}
+	return nil
+}
+
+func platformGuardrail(opts activeCommandOptions) (authz.Guardrail, error) {
 	cfg := config.LoadOperational()
 	var record *engagement.Record
 	if opts.engagementID != "" {
 		loaded, err := (engagement.FileStore{Dir: cfg.EngagementDir}).Get(opts.engagementID)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		record = &loaded
 	}
 
+	var guardrails authz.Chain
 	if record != nil {
+		recordScope := record.Scope
+		recordScope.Deny = append(recordScope.Deny, opts.denyScope...)
 		recordPolicy := authz.Policy{
-			Scope:                 record.Scope,
+			Scope:                 recordScope,
 			AuthorizationAsserted: opts.authorized,
 			Engagement:            record.Authorization(),
 			KillSwitch:            cfg.KillSwitch,
 		}
-		if err := recordPolicy.Authorize(cmd.Context(), action); err != nil {
-			return fmt.Errorf("engagement authorization refused: %w", err)
-		}
-		if len(opts.scope) == 0 {
-			return nil
-		}
+		guardrails = append(guardrails, recordPolicy)
 	}
 
-	policy := authz.Policy{
-		Scope:                 authz.NewScope(opts.scope, opts.denyScope),
-		AuthorizationAsserted: opts.authorized,
-		KillSwitch:            cfg.KillSwitch,
+	if record == nil || len(opts.scope) > 0 {
+		policy := authz.Policy{
+			Scope:                 authz.NewScope(opts.scope, opts.denyScope),
+			AuthorizationAsserted: opts.authorized,
+			KillSwitch:            cfg.KillSwitch,
+		}
+		if record != nil {
+			policy.Engagement = record.Authorization()
+		}
+		guardrails = append(guardrails, policy)
 	}
-	if record != nil {
-		policy.Engagement = record.Authorization()
+	if len(guardrails) == 1 {
+		return guardrails[0], nil
 	}
-	if err := policy.Authorize(cmd.Context(), action); err != nil {
-		return fmt.Errorf("authorization refused: %w", err)
-	}
-	return nil
+	return guardrails, nil
 }
 
 func newEngagementCmd() *cobra.Command {

@@ -136,7 +136,8 @@ func (a *Adapter) Run(ctx context.Context, request tools.Request) (tools.Result,
 
 	start := time.Now()
 	execution, err := a.executor.Execute(ctx, command)
-	result.StartedAt = start.UTC()
+	startedAt := start.UTC()
+	result.StartedAt = &startedAt
 	result.Duration = time.Since(start).Round(time.Millisecond).String()
 	if err != nil {
 		_ = a.audit(ctx, request, action, "allowed", "execution failed: "+err.Error())

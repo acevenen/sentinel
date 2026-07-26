@@ -51,7 +51,7 @@ type Result struct {
 	DryRun    bool       `json:"dry_run"`
 	Findings  []Finding  `json:"findings,omitempty"`
 	Artifacts []Artifact `json:"artifacts,omitempty"`
-	StartedAt time.Time  `json:"started_at,omitempty"`
+	StartedAt *time.Time `json:"started_at,omitempty"`
 	Duration  string     `json:"duration,omitempty"`
 }
 

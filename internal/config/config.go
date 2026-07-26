@@ -22,6 +22,7 @@ const FileName = ".sentinel.yaml"
 const (
 	defaultEngagementDir = ".sentinel-data/engagements"
 	defaultAuditLog      = ".sentinel-data/audit.jsonl"
+	defaultStateDir      = ".sentinel-data/state"
 )
 
 // DefaultModel is the model used when none is configured.
@@ -143,6 +144,7 @@ func (c *Config) MinSeverity() analyzer.Severity {
 type OperationalConfig struct {
 	EngagementDir string
 	AuditLog      string
+	StateDir      string
 	KillSwitch    bool
 }
 
@@ -152,12 +154,16 @@ func LoadOperational() OperationalConfig {
 	cfg := OperationalConfig{
 		EngagementDir: defaultEngagementDir,
 		AuditLog:      defaultAuditLog,
+		StateDir:      defaultStateDir,
 	}
 	if value := strings.TrimSpace(os.Getenv("SENTINEL_ENGAGEMENT_DIR")); value != "" {
 		cfg.EngagementDir = value
 	}
 	if value := strings.TrimSpace(os.Getenv("SENTINEL_AUDIT_LOG")); value != "" {
 		cfg.AuditLog = value
+	}
+	if value := strings.TrimSpace(os.Getenv("SENTINEL_STATE_DIR")); value != "" {
+		cfg.StateDir = value
 	}
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("SENTINEL_KILL_SWITCH"))) {
 	case "1", "true", "yes", "on", "stop":
