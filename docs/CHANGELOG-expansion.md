@@ -34,3 +34,14 @@ platform expansion brief.
 - Implemented the guarded nmap reference adapter, including capability and
   privilege preflight, exact dry-run argv, XML parsing, normalized findings,
   mandatory audit events, and golden fixture tests.
+
+## Phase 3 — Kali runtime
+
+- Expanded the multi-architecture Kali Dev Container with every required
+  security binary and common DNS/WhatWeb utilities.
+- Kept the default user unprivileged and documented the narrow raw-packet and
+  capture capabilities used by nmap, hping3, dumpcap, and Aircrack-ng.
+- Added runtime detection that keeps active adapters dark outside Kali while
+  leaving passive features available.
+- Implemented `sentinel tools doctor` with per-binary readiness and the exact
+  `make dev` recovery instruction.

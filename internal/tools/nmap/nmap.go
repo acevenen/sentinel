@@ -30,6 +30,7 @@ type Adapter struct {
 	binary     string
 	lookPath   func(string) (string, error)
 	hasRawCaps func() bool
+	runtimeOK  func() error
 }
 
 // Option customizes adapter discovery for testing or non-standard installs.
@@ -50,6 +51,11 @@ func WithRawCapabilityCheck(check func() bool) Option {
 	return func(adapter *Adapter) { adapter.hasRawCaps = check }
 }
 
+// WithRuntimeCheck replaces Kali environment detection.
+func WithRuntimeCheck(check func() error) Option {
+	return func(adapter *Adapter) { adapter.runtimeOK = check }
+}
+
 // New constructs an nmap adapter. Guardrail and auditor are mandatory for Run.
 func New(guard authz.Guardrail, auditor tools.Auditor, executor tools.Executor, options ...Option) *Adapter {
 	if executor == nil {
@@ -62,6 +68,7 @@ func New(guard authz.Guardrail, auditor tools.Auditor, executor tools.Executor, 
 		binary:     defaultBinary,
 		lookPath:   exec.LookPath,
 		hasRawCaps: hasRawSocketCapability,
+		runtimeOK:  tools.RequireKaliForActive,
 	}
 	for _, option := range options {
 		option(adapter)
@@ -173,6 +180,9 @@ func (a *Adapter) validateAndAuthorize(ctx context.Context, request tools.Reques
 }
 
 func (a *Adapter) preflightRuntime(request tools.Request) error {
+	if err := a.runtimeOK(); err != nil {
+		return err
+	}
 	if _, err := a.lookPath(a.binary); err != nil {
 		return fmt.Errorf("nmap binary %q is unavailable; %s: %w", a.binary, a.InstallHint(), err)
 	}

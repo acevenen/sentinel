@@ -14,6 +14,7 @@ import (
 	"github.com/acevenen/sentinel/internal/authz"
 	"github.com/acevenen/sentinel/internal/config"
 	"github.com/acevenen/sentinel/internal/engagement"
+	"github.com/acevenen/sentinel/internal/tools"
 )
 
 type activeCommandOptions struct {
@@ -58,6 +59,11 @@ func newGuardedStubCommand(use, short, tool string, active, intrusive, attestati
 			}
 			if err := authorizePlatformAction(cmd, opts, action); err != nil {
 				return err
+			}
+			if active && !opts.dryRun {
+				if err := tools.RequireKaliForActive(); err != nil {
+					return err
+				}
 			}
 
 			plan := struct {
@@ -261,7 +267,24 @@ func newToolsCmd() *cobra.Command {
 		Short: "Report adapter and Kali runtime readiness",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			_, err := fmt.Fprintln(cmd.OutOrStdout(), "tool discovery is scaffolded; full Kali doctor arrives in Phase 3")
+			status := tools.DetectRuntime()
+			out := cmd.OutOrStdout()
+			fmt.Fprintf(out, "Kali runtime: %v  container: %v  platform: %s/%s\n",
+				status.Kali, status.InContainer, status.GOOS, status.GOARCH)
+			for _, item := range status.Tools {
+				state := "MISSING"
+				detail := item.InstallHint
+				if item.Available {
+					state = "READY"
+					detail = item.Path
+				}
+				fmt.Fprintf(out, "  %-8s %-20s %s\n", state, item.Name, detail)
+			}
+			if status.Ready {
+				_, err := fmt.Fprintln(out, "Toolchain ready.")
+				return err
+			}
+			_, err := fmt.Fprintln(out, status.Instruction)
 			return err
 		},
 	})

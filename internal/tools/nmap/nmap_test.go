@@ -99,6 +99,7 @@ func TestRunParsesGoldenOutput(t *testing.T) {
 		executor,
 		WithLookPath(func(string) (string, error) { return "/usr/bin/nmap", nil }),
 		WithRawCapabilityCheck(func() bool { return true }),
+		WithRuntimeCheck(func() error { return nil }),
 	)
 	result, err := adapter.Run(context.Background(), tools.Request{
 		Action: authz.Action{Operator: "alice"},
@@ -125,6 +126,7 @@ func TestRunFailsClosedWhenStartCannotBeAudited(t *testing.T) {
 		auditor,
 		executor,
 		WithLookPath(func(string) (string, error) { return "/usr/bin/nmap", nil }),
+		WithRuntimeCheck(func() error { return nil }),
 	)
 	_, err := adapter.Run(context.Background(), tools.Request{
 		Action: authz.Action{Operator: "alice"},
@@ -144,6 +146,7 @@ func TestPreflightReportsMissingBinary(t *testing.T) {
 		&memoryAuditor{},
 		&fakeExecutor{},
 		WithLookPath(func(string) (string, error) { return "", errors.New("missing") }),
+		WithRuntimeCheck(func() error { return nil }),
 	)
 	err := adapter.Preflight(context.Background(), tools.Request{
 		Action: authz.Action{Operator: "alice"},
@@ -161,6 +164,7 @@ func TestPreflightRefusesUnprivilegedSYNScan(t *testing.T) {
 		&fakeExecutor{},
 		WithLookPath(func(string) (string, error) { return "/usr/bin/nmap", nil }),
 		WithRawCapabilityCheck(func() bool { return false }),
+		WithRuntimeCheck(func() error { return nil }),
 	)
 	err := adapter.Preflight(context.Background(), tools.Request{
 		Action: authz.Action{Operator: "alice"},
