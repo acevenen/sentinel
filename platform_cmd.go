@@ -13,10 +13,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/acevenen/sentinel/internal/analyzer"
 	"github.com/acevenen/sentinel/internal/authz"
 	"github.com/acevenen/sentinel/internal/config"
 	"github.com/acevenen/sentinel/internal/engagement"
 	"github.com/acevenen/sentinel/internal/methodology"
+	"github.com/acevenen/sentinel/internal/orchestrator"
 	"github.com/acevenen/sentinel/internal/redteam"
 	"github.com/acevenen/sentinel/internal/tools"
 	"github.com/acevenen/sentinel/internal/tools/nmap"
@@ -41,9 +43,106 @@ func newPlatformCommands() []*cobra.Command {
 		newGuardedStubCommand("wireless <bssid>", "Run an authorized wireless assessment", "aircrack-ng", true, true, false),
 		newGuardedStubCommand("se <target>", "Run a sanctioned social-engineering assessment", "set", true, true, false),
 		newAIRedTeamCmd(),
+		newOrchestrateCmd(),
 		newEngagementCmd(),
 		newToolsCmd(),
 	}
+}
+
+func newOrchestrateCmd() *cobra.Command {
+	var (
+		opts             activeCommandOptions
+		contentPaths     []string
+		plannerMode      string
+		model            string
+		confirmIntrusive bool
+	)
+	cmd := &cobra.Command{
+		Use:   "orchestrate <target>",
+		Short: "Produce a guarded, human-reviewed methodology plan",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if opts.engagementID == "" {
+				return errors.New("--engagement is required for resumable orchestration")
+			}
+			cfg := config.LoadOperational()
+			state, err := (methodology.FileStateStore{Dir: cfg.StateDir}).Load(opts.engagementID)
+			if errors.Is(err, os.ErrNotExist) {
+				state = methodology.RunState{EngagementID: opts.engagementID}
+			} else if err != nil {
+				return err
+			}
+			observations := make([]orchestrator.Observation, 0, len(contentPaths))
+			for _, path := range contentPaths {
+				content, err := readPlanningContent(path)
+				if err != nil {
+					return err
+				}
+				observations = append(observations, orchestrator.Observation{Source: "tool", Content: content})
+			}
+			var planner orchestrator.Planner
+			switch plannerMode {
+			case "methodology":
+				planner = orchestrator.MethodologyPlanner{}
+			case "claude":
+				apiKey := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY"))
+				if apiKey == "" {
+					return errors.New("ANTHROPIC_API_KEY is required for --planner claude")
+				}
+				planner = orchestrator.ClaudePlanner{Client: analyzer.NewClient(apiKey, model)}
+			case "auto":
+				if apiKey := strings.TrimSpace(os.Getenv("ANTHROPIC_API_KEY")); apiKey != "" {
+					planner = orchestrator.ClaudePlanner{Client: analyzer.NewClient(apiKey, model)}
+				} else {
+					planner = orchestrator.MethodologyPlanner{}
+				}
+			default:
+				return fmt.Errorf("unsupported planner %q (want auto, claude, or methodology)", plannerMode)
+			}
+			guardrail, err := platformGuardrail(opts)
+			if err != nil {
+				return err
+			}
+			engine := orchestrator.Engine{
+				Planner: planner,
+				Guard:   guardrail,
+				Auditor: &engagement.AuditLog{Path: cfg.AuditLog},
+			}
+			report, runErr := engine.Run(cmd.Context(), orchestrator.PlanningInput{
+				EngagementID: opts.engagementID, Operator: opts.operator,
+				Target: args[0], State: state, Observations: observations,
+			}, orchestrator.RunOptions{
+				ConfirmIntrusive: confirmIntrusive,
+				DryRun:           opts.dryRun,
+			})
+			if err := writeJSON(opts.out, report); err != nil {
+				return err
+			}
+			return runErr
+		},
+	}
+	addActiveFlags(cmd, &opts)
+	cmd.Flags().StringSliceVar(&contentPaths, "content", nil, "captured target-content file to inspect before planning (repeatable)")
+	cmd.Flags().StringVar(&plannerMode, "planner", "auto", "planner: auto, claude, or methodology")
+	cmd.Flags().StringVar(&model, "model", config.DefaultModel, "Anthropic model for Claude planning")
+	cmd.Flags().BoolVar(&confirmIntrusive, "confirm-intrusive", false, "explicitly confirm the current intrusive proposal")
+	return cmd
+}
+
+func readPlanningContent(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", fmt.Errorf("opening planning content: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+	data, err := io.ReadAll(io.LimitReader(file, (2<<20)+1))
+	if err != nil {
+		return "", fmt.Errorf("reading planning content: %w", err)
+	}
+	if len(data) > 2<<20 {
+		return "", errors.New("planning content exceeds 2 MiB")
+	}
+	return string(data), nil
 }
 
 func newAIRedTeamCmd() *cobra.Command {

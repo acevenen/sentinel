@@ -81,3 +81,19 @@ platform expansion brief.
 - Replaced the AI red-team scaffold with a scope-gated, audited HTTP runner
   that executes only operator-supplied and explicitly approved suite content.
 - Documented adopted and skipped public sources in `docs/SOURCES.md`.
+
+## Phase 7 — guarded orchestration
+
+- Added a Claude planner that reuses the existing retrying analyzer client and
+  accepts only strict structured plan output.
+- Added a deterministic methodology planner for reproducible offline and CI
+  dry-runs.
+- Added a guarded orchestration engine that scans untrusted target content
+  before planner invocation, exposes only safe finding metadata, forces trusted
+  action classification, limits tools to the next methodology stage, and sends
+  every valid proposal through the authorization gate.
+- Added `sentinel orchestrate` with resumable engagement state, explicit
+  planner selection, content inspection, intrusive-action confirmation, and
+  hash-chained plan/decision auditing.
+- Added regression tests proving injected target content never reaches the
+  planner and out-of-scope planner output is refused.

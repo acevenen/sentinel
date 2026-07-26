@@ -1,5 +1,5 @@
 // Package guard orchestrates Sentinel's runtime guard: for each item in a
-// session stream it runs the five detectors over tool outputs, checks proposed
+// session stream it runs deterministic detectors over tool outputs, checks proposed
 // actions against the declared intent through Layers 2–4, and produces a
 // per-action verdict plus a session-level report.
 //
