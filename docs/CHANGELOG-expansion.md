@@ -45,3 +45,15 @@ platform expansion brief.
   leaving passive features available.
 - Implemented `sentinel tools doctor` with per-binary readiness and the exact
   `make dev` recovery instruction.
+
+## Phase 4 — complete guarded adapter set
+
+- Added one guarded package for hping3, tshark, Skipfish, sqlmap, Metasploit,
+  Hashcat, Aircrack-ng, SET, and common Kali utilities.
+- Centralized forced action classification, scope/engagement authorization,
+  argv construction, runtime/binary preflight, fail-closed audit, execution,
+  and parsing in the reusable command adapter.
+- Enforced conservative hping/Skipfish/sqlmap rates, capability checks for raw
+  packet/capture modes, and Metasploit resource target validation.
+- Added canned output and golden normalized-finding tests for every adapter;
+  no unit test launches a live security tool.

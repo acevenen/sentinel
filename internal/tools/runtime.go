@@ -90,6 +90,32 @@ func RequireKaliForActive() error {
 	return nil
 }
 
+// BinaryHasCapabilities reports whether the current user is root or a Linux
+// executable carries every requested file capability.
+func BinaryHasCapabilities(binary string, required ...string) bool {
+	if os.Geteuid() == 0 {
+		return true
+	}
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	path, err := exec.LookPath(binary)
+	if err != nil {
+		return false
+	}
+	output, err := exec.Command("getcap", path).Output()
+	if err != nil {
+		return false
+	}
+	value := strings.ToLower(string(output))
+	for _, capability := range required {
+		if !strings.Contains(value, strings.ToLower(capability)) {
+			return false
+		}
+	}
+	return true
+}
+
 func inKali() bool {
 	data, err := os.ReadFile("/etc/os-release")
 	if err != nil {

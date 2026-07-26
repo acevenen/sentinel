@@ -1,0 +1,14 @@
+[
+  {
+    "id": "hashcat:cracked:1",
+    "title": "Authorized hash recovered",
+    "description": "Hashcat recovered one supplied hash; plaintext is redacted from Sentinel output and audit logs.",
+    "severity": "info",
+    "target": "5f4dcc3b5aa765d61d8327deb882cf99",
+    "evidence": "[REDACTED recovered plaintext]",
+    "metadata": {
+      "status": "cracked"
+    }
+  }
+]
+

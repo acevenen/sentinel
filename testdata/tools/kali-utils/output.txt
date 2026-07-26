@@ -1,0 +1,2 @@
+https://lab.local [200 OK] HTTPServer[nginx], Title[Local Lab]
+

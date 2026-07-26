@@ -1,0 +1,25 @@
+[
+  {
+    "id": "tshark:packet:1",
+    "title": "HTTP traffic 192.0.2.20 → 192.0.2.10",
+    "severity": "info",
+    "target": "192.0.2.10",
+    "metadata": {
+      "destination": "192.0.2.10",
+      "protocol": "HTTP",
+      "source": "192.0.2.20"
+    }
+  },
+  {
+    "id": "tshark:credential-exposure:1",
+    "title": "Potential credential material visible in capture",
+    "description": "A cleartext or directly encoded authentication field was present in the supplied capture.",
+    "severity": "high",
+    "target": "192.0.2.10",
+    "evidence": "[REDACTED credential field]",
+    "metadata": {
+      "protocol": "HTTP"
+    }
+  }
+]
+

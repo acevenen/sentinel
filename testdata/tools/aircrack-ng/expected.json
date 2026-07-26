@@ -1,0 +1,24 @@
+[
+  {
+    "id": "aircrack:handshake:AA:BB:CC:DD:EE:FF",
+    "title": "Wireless handshake detected",
+    "severity": "info",
+    "target": "AA:BB:CC:DD:EE:FF",
+    "evidence": "1 handshake",
+    "metadata": {
+      "handshakes": "1"
+    }
+  },
+  {
+    "id": "aircrack:key-recovered:AA:BB:CC:DD:EE:FF",
+    "title": "Authorized wireless key recovered",
+    "description": "Recovered key material is redacted from Sentinel output.",
+    "severity": "high",
+    "target": "AA:BB:CC:DD:EE:FF",
+    "evidence": "KEY FOUND! [ REDACTED ]",
+    "metadata": {
+      "status": "recovered"
+    }
+  }
+]
+

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "set:metric:messages-sent",
+    "title": "Campaign metric: messages sent",
+    "severity": "info",
+    "evidence": "10 aggregate event(s)",
+    "metadata": {
+      "count": "10",
+      "metric": "messages sent"
+    }
+  },
+  {
+    "id": "set:metric:links-opened",
+    "title": "Campaign metric: links opened",
+    "severity": "info",
+    "evidence": "3 aggregate event(s)",
+    "metadata": {
+      "count": "3",
+      "metric": "links opened"
+    }
+  }
+]
+

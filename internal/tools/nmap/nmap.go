@@ -6,10 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"os/exec"
-	"runtime"
-	"strconv"
 	"strings"
 	"time"
 
@@ -62,16 +59,20 @@ func New(guard authz.Guardrail, auditor tools.Auditor, executor tools.Executor, 
 		executor = tools.OSExecutor{}
 	}
 	adapter := &Adapter{
-		guard:      guard,
-		auditor:    auditor,
-		executor:   executor,
-		binary:     defaultBinary,
-		lookPath:   exec.LookPath,
-		hasRawCaps: hasRawSocketCapability,
-		runtimeOK:  tools.RequireKaliForActive,
+		guard:     guard,
+		auditor:   auditor,
+		executor:  executor,
+		binary:    defaultBinary,
+		lookPath:  exec.LookPath,
+		runtimeOK: tools.RequireKaliForActive,
 	}
 	for _, option := range options {
 		option(adapter)
+	}
+	if adapter.hasRawCaps == nil {
+		adapter.hasRawCaps = func() bool {
+			return tools.BinaryHasCapabilities(adapter.binary, "cap_net_raw")
+		}
 	}
 	return adapter
 }
@@ -194,9 +195,8 @@ func (a *Adapter) preflightRuntime(request tools.Request) error {
 
 func (a *Adapter) buildCommand(request tools.Request) tools.Command {
 	args := make([]string, 0, len(request.Args)+3)
-	args = append(args, "-oX", "-")
 	args = append(args, request.Args...)
-	args = append(args, request.Target)
+	args = append(args, "-oX", "-", request.Target)
 	return tools.Command{
 		Path:        a.binary,
 		Args:        args,
@@ -209,8 +209,8 @@ func (a *Adapter) audit(ctx context.Context, request tools.Request, action authz
 	if a.auditor == nil {
 		return errors.New("nmap auditor is required")
 	}
-	args := append([]string{"-oX", "-"}, request.Args...)
-	args = append(args, request.Target)
+	args := append([]string(nil), request.Args...)
+	args = append(args, "-oX", "-", request.Target)
 	return a.auditor.Record(ctx, tools.AuditEvent{
 		Timestamp:     time.Now().UTC(),
 		Operator:      action.Operator,
@@ -229,31 +229,6 @@ func requestsSYNScan(args []string) bool {
 		if arg == "-sS" || strings.Contains(arg, "sS") && strings.HasPrefix(arg, "-") {
 			return true
 		}
-	}
-	return false
-}
-
-func hasRawSocketCapability() bool {
-	if os.Geteuid() == 0 {
-		return true
-	}
-	if runtime.GOOS != "linux" {
-		return false
-	}
-	data, err := os.ReadFile("/proc/self/status")
-	if err != nil {
-		return false
-	}
-	for _, line := range strings.Split(string(data), "\n") {
-		if !strings.HasPrefix(line, "CapEff:") {
-			continue
-		}
-		value, err := strconv.ParseUint(strings.TrimSpace(strings.TrimPrefix(line, "CapEff:")), 16, 64)
-		if err != nil {
-			return false
-		}
-		const capNetRaw = uint64(1 << 13)
-		return value&capNetRaw != 0
 	}
 	return false
 }

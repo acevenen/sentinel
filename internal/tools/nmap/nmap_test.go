@@ -54,7 +54,7 @@ func TestDryRunReturnsExactCommandWithoutExecuting(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"nmap", "-oX", "-", "-sV", "192.0.2.10"}
+	want := []string{"nmap", "-sV", "-oX", "-", "192.0.2.10"}
 	if !reflect.DeepEqual(result.Command, want) {
 		t.Fatalf("Command = %#v, want %#v", result.Command, want)
 	}

