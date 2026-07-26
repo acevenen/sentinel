@@ -89,3 +89,45 @@ func TestPassiveActionNeedsNoNetworkScope(t *testing.T) {
 		t.Fatalf("Authorize(passive) error = %v", err)
 	}
 }
+
+func TestPolicyProgramRules(t *testing.T) {
+	action := Action{
+		Operator: "alice", EngagementID: "bounty-1", Target: "app.example",
+		Tool: "nmap", Active: true,
+	}
+	policy := Policy{
+		Scope:                 NewScope([]string{"app.example"}, nil),
+		AuthorizationAsserted: true,
+		AutomationProhibited:  true,
+	}
+	if err := policy.Authorize(context.Background(), action); !errors.Is(err, ErrAutomationProhibited) {
+		t.Fatalf("automation error = %v", err)
+	}
+
+	policy.AutomationProhibited = false
+	policy.BountyMode = true
+	action.Tool = "metasploit"
+	if err := policy.Authorize(context.Background(), action); !errors.Is(err, ErrProgramProhibited) {
+		t.Fatalf("bounty exploit error = %v", err)
+	}
+	action.Tool = "set"
+	if err := policy.Authorize(context.Background(), action); !errors.Is(err, ErrProgramProhibited) {
+		t.Fatalf("bounty social error = %v", err)
+	}
+}
+
+func TestRevocable(t *testing.T) {
+	policy := Policy{
+		Scope:                 NewScope([]string{"127.0.0.1"}, nil),
+		AuthorizationAsserted: true,
+	}
+	guard := NewRevocable(policy)
+	action := Action{Target: "127.0.0.1", Tool: "nmap", Active: true}
+	if err := guard.Authorize(context.Background(), action); err != nil {
+		t.Fatal(err)
+	}
+	guard.Revoke()
+	if err := guard.Authorize(context.Background(), action); !errors.Is(err, ErrScopeRevoked) {
+		t.Fatalf("revocation error = %v", err)
+	}
+}

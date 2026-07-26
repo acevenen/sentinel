@@ -1,0 +1,11 @@
+started_at: 2026-07-25T20:00:00Z
+finished_at: 2026-07-25T20:02:00Z
+stages:
+  - recon
+tools:
+  - nmap
+  - ai-redteam
+outcomes:
+  - challenge_id: local-echo
+    attempted: true
+    solved: true

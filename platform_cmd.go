@@ -44,6 +44,8 @@ func newPlatformCommands() []*cobra.Command {
 		newGuardedStubCommand("se <target>", "Run a sanctioned social-engineering assessment", "set", true, true, false),
 		newAIRedTeamCmd(),
 		newOrchestrateCmd(),
+		newCTFCmd(),
+		newBountyCmd(),
 		newEngagementCmd(),
 		newToolsCmd(),
 	}
@@ -368,6 +370,10 @@ func platformGuardrail(opts activeCommandOptions) (authz.Guardrail, error) {
 			AuthorizationAsserted: opts.authorized,
 			Engagement:            record.Authorization(),
 			KillSwitch:            cfg.KillSwitch,
+			AutomationProhibited:  record.AutomationProhibited,
+			BountyMode:            record.Mode == "bounty",
+			ExploitAuthorized:     record.ExploitAuthorized,
+			SocialAuthorized:      record.SocialAuthorized,
 		}
 		guardrails = append(guardrails, recordPolicy)
 	}
@@ -380,6 +386,10 @@ func platformGuardrail(opts activeCommandOptions) (authz.Guardrail, error) {
 		}
 		if record != nil {
 			policy.Engagement = record.Authorization()
+			policy.AutomationProhibited = record.AutomationProhibited
+			policy.BountyMode = record.Mode == "bounty"
+			policy.ExploitAuthorized = record.ExploitAuthorized
+			policy.SocialAuthorized = record.SocialAuthorized
 		}
 		guardrails = append(guardrails, policy)
 	}

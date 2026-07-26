@@ -120,6 +120,15 @@ var (
 	ErrAttestationRequired = errors.New("intrusive action requires an authorization reference and operator attestation")
 	// ErrKillSwitch means all active work has been stopped globally.
 	ErrKillSwitch = errors.New("global kill switch is active")
+	// ErrAutomationProhibited means engagement rules forbid automated active
+	// traffic.
+	ErrAutomationProhibited = errors.New("engagement rules prohibit automated active testing")
+	// ErrProgramProhibited means an engagement mode disallows the selected
+	// high-risk tool without specific written permission.
+	ErrProgramProhibited = errors.New("engagement program rules prohibit this tool")
+	// ErrScopeRevoked means a multi-action workflow lost authorization between
+	// actions.
+	ErrScopeRevoked = errors.New("engagement scope was revoked")
 )
 
 // Policy is the default Guardrail implementation.
@@ -128,6 +137,10 @@ type Policy struct {
 	AuthorizationAsserted bool
 	Engagement            EngagementAuthorization
 	KillSwitch            bool
+	AutomationProhibited  bool
+	BountyMode            bool
+	ExploitAuthorized     bool
+	SocialAuthorized      bool
 }
 
 // Authorize fails closed. Passive actions need no network scope, but actions
@@ -150,6 +163,9 @@ func (p Policy) Authorize(ctx context.Context, action Action) error {
 		if !p.AuthorizationAsserted {
 			return ErrAuthorizationRequired
 		}
+		if p.AutomationProhibited {
+			return ErrAutomationProhibited
+		}
 		if p.Scope.Empty() {
 			return ErrScopeRequired
 		}
@@ -159,6 +175,19 @@ func (p Policy) Authorize(ctx context.Context, action Action) error {
 				return fmt.Errorf("%w: %s matched %q", ErrDenied, action.Target, decision.Rule)
 			}
 			return fmt.Errorf("%w: %s", ErrOutOfScope, action.Target)
+		}
+	}
+
+	if p.BountyMode {
+		switch strings.ToLower(action.Tool) {
+		case "metasploit":
+			if !p.ExploitAuthorized {
+				return fmt.Errorf("%w: bounty policy does not authorize exploitation", ErrProgramProhibited)
+			}
+		case "set", "setoolkit":
+			if !p.SocialAuthorized {
+				return fmt.Errorf("%w: bounty policy does not authorize social engineering", ErrProgramProhibited)
+			}
 		}
 	}
 

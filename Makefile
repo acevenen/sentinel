@@ -3,8 +3,9 @@ SHELL := /bin/sh
 GOLANGCI_LINT_VERSION := v2.1.6
 GITLEAKS_VERSION := v8.24.2
 GO_BIN := $(shell go env GOPATH)/bin
+LAB_HOST := $(shell if [ -f /.dockerenv ]; then echo host.docker.internal; else echo 127.0.0.1; fi)
 
-.PHONY: bootstrap dev build run test test-integration fetch-knowledge lint fmt clean
+.PHONY: bootstrap dev build run test test-integration lab-up lab-down fetch-knowledge lint fmt clean
 
 bootstrap:
 	go mod download
@@ -34,7 +35,24 @@ test:
 	go test ./... -race
 
 test-integration:
-	go test -tags=integration ./... -count=1
+	docker compose -f deploy/compose.yaml up -d --build llm-echo
+	@trap 'docker compose -f deploy/compose.yaml down --volumes' EXIT; \
+		i=0; \
+		until curl --fail --silent "http://$(LAB_HOST):4010/healthz" >/dev/null; do \
+			i=$$((i + 1)); \
+			if [ "$$i" -ge 30 ]; then echo "local lab did not become ready"; exit 1; fi; \
+			sleep 1; \
+		done; \
+		SENTINEL_INTEGRATION_LLM_URL="http://$(LAB_HOST):4010/v1/chat" \
+		SENTINEL_INTEGRATION_NMAP_TARGET="$(LAB_HOST)" \
+		SENTINEL_INTEGRATION_NMAP_PORT=4010 \
+		go test -tags=integration ./... -count=1
+
+lab-up:
+	docker compose -f deploy/compose.yaml --profile web up -d --build llm-echo juice-shop
+
+lab-down:
+	docker compose -f deploy/compose.yaml --profile web down --volumes
 
 fetch-knowledge:
 	./scripts/fetch-knowledge.sh

@@ -22,6 +22,7 @@ var validID = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 type Record struct {
 	ID                   string      `json:"id"`
 	Name                 string      `json:"name"`
+	Mode                 string      `json:"mode,omitempty"`
 	Operator             string      `json:"operator"`
 	AuthorizationRef     string      `json:"authorization_reference,omitempty"`
 	OperatorAttested     bool        `json:"operator_attested"`
@@ -29,6 +30,8 @@ type Record struct {
 	RateLimitRPS         float64     `json:"rate_limit_rps,omitempty"`
 	Concurrency          int         `json:"concurrency,omitempty"`
 	AutomationProhibited bool        `json:"automation_prohibited,omitempty"`
+	ExploitAuthorized    bool        `json:"exploit_authorized,omitempty"`
+	SocialAuthorized     bool        `json:"social_engineering_authorized,omitempty"`
 	CreatedAt            time.Time   `json:"created_at"`
 	UpdatedAt            time.Time   `json:"updated_at"`
 }
@@ -49,6 +52,11 @@ func (r Record) Validate() error {
 	}
 	if r.Concurrency < 0 {
 		return errors.New("engagement concurrency cannot be negative")
+	}
+	switch r.Mode {
+	case "", "standard", "lab", "ctf", "bounty":
+	default:
+		return errors.New("engagement mode must be standard, lab, ctf, or bounty")
 	}
 	return nil
 }

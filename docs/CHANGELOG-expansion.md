@@ -97,3 +97,22 @@ platform expansion brief.
   hash-chained plan/decision auditing.
 - Added regression tests proving injected target content never reaches the
   planner and out-of-scope planner output is refused.
+
+## Phase 8 — isolated labs, CTF scorecards, and bounty policy
+
+- Added a loopback-only, internal-network Compose range with pinned Juice Shop
+  and WebGoat profiles, official DVWA profile, and a no-root LLM HTTP fixture.
+- Added build-tagged local integration tests for the guarded AI-red-team HTTP
+  runner and nmap TCP-connect reconnaissance, plus Dev Container Docker access
+  and deterministic lab lifecycle Make targets.
+- Added `sentinel ctf start/score`, strict operator-supplied platform rules,
+  one engagement per challenge, methodology/tool coverage, solve-rate history,
+  and regression scorecards.
+- Added `sentinel bounty import` with strict enrollment, allow/deny scope,
+  automation limits, high-risk written authorization, and fail-closed
+  Metasploit/SET policy.
+- Added dynamic scope revocation and tests proving a multi-proposal workflow
+  stops between actions when authorization is withdrawn.
+- Documented local/public lab boundaries and recorded the local LLM E2E sample.
+  The Juice Shop sample slot truthfully records that Docker execution was not
+  possible on the implementation host rather than inventing evidence.

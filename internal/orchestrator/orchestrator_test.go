@@ -18,6 +18,21 @@ type memoryAuditor struct {
 	events []tools.AuditEvent
 }
 
+type revokingAuditor struct {
+	memoryAuditor
+	guard *authz.Revocable
+}
+
+func (a *revokingAuditor) Record(ctx context.Context, event tools.AuditEvent) error {
+	if err := a.memoryAuditor.Record(ctx, event); err != nil {
+		return err
+	}
+	if event.Tool == "nmap" && event.ScopeDecision == "allowed" {
+		a.guard.Revoke()
+	}
+	return nil
+}
+
 func (a *memoryAuditor) Record(_ context.Context, event tools.AuditEvent) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -153,5 +168,32 @@ func TestClaudePlannerUsesSafeProjection(t *testing.T) {
 	}
 	if !strings.Contains(client.user, "CWE-20") {
 		t.Fatalf("safe finding metadata missing from prompt: %s", client.user)
+	}
+}
+
+func TestEngineRefusesScopeRevokedBetweenProposals(t *testing.T) {
+	const target = "http://127.0.0.1:3000"
+	base := authz.Policy{
+		Scope:                 authz.NewScope([]string{target}, nil),
+		AuthorizationAsserted: true,
+	}
+	guard := authz.NewRevocable(base)
+	auditor := &revokingAuditor{guard: guard}
+	proposal := Proposal{
+		Stage: methodology.StageRecon, Tool: "nmap",
+		Action: authz.Action{Target: target},
+	}
+	engine := Engine{
+		Planner: PlannerFunc(func(context.Context, PlanningInput) (Plan, error) {
+			return Plan{Proposals: []Proposal{proposal, proposal}}, nil
+		}),
+		Guard: guard, Auditor: auditor,
+	}
+	report, err := engine.Run(context.Background(), planningInput(), RunOptions{DryRun: true})
+	if !errors.Is(err, authz.ErrScopeRevoked) {
+		t.Fatalf("error = %v", err)
+	}
+	if len(report.Decisions) != 2 || report.Decisions[1].Status != StatusRefused {
+		t.Fatalf("report = %+v", report)
 	}
 }

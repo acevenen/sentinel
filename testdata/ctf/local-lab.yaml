@@ -1,0 +1,16 @@
+platform: Sentinel local lab
+event: Phase 8 regression
+policy_url: https://example.invalid/sentinel-local-lab-rules
+rules:
+  automation_allowed: true
+  max_requests_per_second: 2
+  max_concurrency: 1
+  intrusive_allowed: false
+challenges:
+  - id: local-echo
+    name: Local LLM echo
+    scope:
+      allow:
+        - http://127.0.0.1:4010
+      deny:
+        - 169.254.169.254
