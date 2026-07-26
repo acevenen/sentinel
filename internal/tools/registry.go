@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"os/exec"
 	"sort"
 	"sync"
 )
@@ -11,6 +12,22 @@ import (
 type Registry struct {
 	mu    sync.RWMutex
 	tools map[string]Tool
+}
+
+// DescribedTool provides binary discovery metadata without running preflight.
+type DescribedTool interface {
+	Tool
+	Binary() string
+	InstallHint() string
+}
+
+// ToolStatus is one adapter's local runtime availability.
+type ToolStatus struct {
+	Name        string `json:"name"`
+	Binary      string `json:"binary,omitempty"`
+	Path        string `json:"path,omitempty"`
+	Available   bool   `json:"available"`
+	InstallHint string `json:"install_hint,omitempty"`
 }
 
 // NewRegistry creates an empty adapter registry.
@@ -51,4 +68,28 @@ func (r *Registry) Names() []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// Discover reports installed and missing binaries in deterministic order.
+func (r *Registry) Discover() []ToolStatus {
+	names := r.Names()
+	statuses := make([]ToolStatus, 0, len(names))
+	for _, name := range names {
+		tool, _ := r.Get(name)
+		status := ToolStatus{Name: name}
+		described, ok := tool.(DescribedTool)
+		if !ok {
+			statuses = append(statuses, status)
+			continue
+		}
+		status.Binary = described.Binary()
+		status.InstallHint = described.InstallHint()
+		path, err := exec.LookPath(status.Binary)
+		if err == nil {
+			status.Available = true
+			status.Path = path
+		}
+		statuses = append(statuses, status)
+	}
+	return statuses
 }

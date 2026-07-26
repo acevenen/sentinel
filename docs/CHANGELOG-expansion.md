@@ -24,3 +24,13 @@ platform expansion brief.
 - Added guarded command scaffolds for recon, web testing, exploitation,
   credential auditing, wireless, social engineering, AI red teaming, and tool
   diagnostics. No external active capability is enabled in this phase.
+
+## Phase 2 — adapter contract and nmap reference
+
+- Added a direct-argv execution sandbox with shell refusal, context timeouts,
+  bounded stdout/stderr capture, exit status handling, and secret redaction.
+- Extended the registry with deterministic binary discovery and install hints.
+- Added hash-chained JSONL audit recording and verification.
+- Implemented the guarded nmap reference adapter, including capability and
+  privilege preflight, exact dry-run argv, XML parsing, normalized findings,
+  mandatory audit events, and golden fixture tests.

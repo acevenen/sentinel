@@ -1,0 +1,32 @@
+[
+  {
+    "id": "nmap:192.0.2.10:tcp:80",
+    "title": "Open TCP port 80 (http)",
+    "description": "nginx 1.25.3",
+    "severity": "info",
+    "target": "192.0.2.10",
+    "evidence": "state=open reason=syn-ack",
+    "metadata": {
+      "hostname": "lab.local",
+      "port": "80",
+      "product": "nginx",
+      "protocol": "tcp",
+      "service": "http",
+      "state": "open",
+      "version": "1.25.3"
+    }
+  },
+  {
+    "id": "nmap:192.0.2.10:tcp:80:script:http-title",
+    "title": "Nmap script http-title on 192.0.2.10:80",
+    "severity": "info",
+    "target": "192.0.2.10",
+    "evidence": "Welcome to the local lab",
+    "metadata": {
+      "port": "80",
+      "protocol": "tcp",
+      "script_id": "http-title"
+    }
+  }
+]
+

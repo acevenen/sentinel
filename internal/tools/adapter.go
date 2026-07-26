@@ -17,6 +17,7 @@ type Request struct {
 	Action  authz.Action
 	Target  string
 	Args    []string
+	Secrets []string
 	DryRun  bool
 	OutDir  string
 	Timeout time.Duration
@@ -52,6 +53,25 @@ type Result struct {
 	Artifacts []Artifact `json:"artifacts,omitempty"`
 	StartedAt time.Time  `json:"started_at,omitempty"`
 	Duration  string     `json:"duration,omitempty"`
+}
+
+// AuditEvent is the structured record every active adapter writes.
+type AuditEvent struct {
+	Timestamp     time.Time `json:"timestamp"`
+	Operator      string    `json:"operator"`
+	EngagementID  string    `json:"engagement_id,omitempty"`
+	Target        string    `json:"target"`
+	Tool          string    `json:"tool"`
+	Arguments     []string  `json:"arguments,omitempty"`
+	ScopeDecision string    `json:"scope_decision"`
+	Result        string    `json:"result"`
+	DryRun        bool      `json:"dry_run"`
+}
+
+// Auditor persists active-action audit events. Adapters fail closed when an
+// authorized action cannot be audited.
+type Auditor interface {
+	Record(context.Context, AuditEvent) error
 }
 
 // Tool is implemented by every external adapter.
