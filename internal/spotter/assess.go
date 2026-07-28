@@ -208,6 +208,9 @@ func Assess(device Device, advisories []knowledge.Advisory) Assessment {
 			Source:         advisory.Source,
 		}
 		for _, step := range advisory.Remediation {
+			if !actionIsRelevant(step.Tag, device) {
+				continue
+			}
 			concern.Actions = append(concern.Actions, Action{
 				Do:       step.Action,
 				Tag:      step.Tag,
@@ -232,6 +235,23 @@ func Assess(device Device, advisories []knowledge.Advisory) Assessment {
 	assessment.Plan = buildPlan(assessment.Concerns)
 	assessment.Headline = headline(device, assessment)
 	return assessment
+}
+
+// actionIsRelevant drops advice for a state the device is not actually in.
+// Telling someone to remove a port-forward for a camera that was never exposed
+// is noise, and noise is what makes people stop reading security advice.
+func actionIsRelevant(tag string, d Device) bool {
+	switch tag {
+	case "remove-internet-exposure", "disable-upnp", "use-vpn-not-portforward":
+		// Only meaningful when the device is actually reachable from outside,
+		// or when we cannot tell — in which case keeping it is the safe call.
+		return d.Exposure == ExposureInternet || d.Exposure == ExposureUnknown
+	case "network-isolate":
+		// Already segmented; nothing to do.
+		return d.Exposure != ExposureIsolated
+	default:
+		return true
+	}
 }
 
 // advisoryConfidence decides how strongly an advisory attaches to this device,

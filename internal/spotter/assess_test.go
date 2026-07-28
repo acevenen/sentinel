@@ -275,6 +275,60 @@ func TestAssessPlanCollapsesSemanticallyIdenticalAdvice(t *testing.T) {
 	}
 }
 
+// Advice for a state the device is not in is noise, and noise is what makes
+// people stop reading security advice.
+func TestAssessPlanOmitsIrrelevantAdvice(t *testing.T) {
+	t.Run("lan device is not told to undo internet exposure", func(t *testing.T) {
+		got := Assess(namedDevice(t, "Dahua", ExposureLAN), knowledge.DeviceAdvisories())
+		for _, a := range got.Plan {
+			switch a.Tag {
+			case "remove-internet-exposure", "disable-upnp", "use-vpn-not-portforward":
+				t.Fatalf("LAN-only device advised to %q", a.Do)
+			}
+		}
+		if len(got.Plan) == 0 || got.Plan[0].Tag != "firmware-update" {
+			t.Fatalf("expected the firmware update to lead for a LAN device, got %+v", got.Plan)
+		}
+	})
+
+	t.Run("already isolated device is not told to isolate", func(t *testing.T) {
+		got := Assess(namedDevice(t, "Dahua", ExposureIsolated), knowledge.DeviceAdvisories())
+		for _, a := range got.Plan {
+			if a.Tag == "network-isolate" {
+				t.Fatalf("already-isolated device advised to %q", a.Do)
+			}
+		}
+	})
+
+	t.Run("internet-exposed device keeps the exposure advice", func(t *testing.T) {
+		got := Assess(namedDevice(t, "Dahua", ExposureInternet), knowledge.DeviceAdvisories())
+		var found bool
+		for _, a := range got.Plan {
+			if a.Tag == "remove-internet-exposure" {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("internet-exposed device lost its exposure advice")
+		}
+	})
+
+	t.Run("unknown exposure keeps the advice", func(t *testing.T) {
+		// When reachability is unestablished, keeping the advice is the safe
+		// call — the same reason unknown exposure scores pessimistically.
+		got := Assess(namedDevice(t, "Dahua", ExposureUnknown), knowledge.DeviceAdvisories())
+		var found bool
+		for _, a := range got.Plan {
+			if a.Tag == "remove-internet-exposure" {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("unknown-exposure device should keep exposure advice")
+		}
+	})
+}
+
 func TestAssessAlwaysCarriesTheDataProvenanceNotice(t *testing.T) {
 	// The shipped advisory corpus is an illustrative sample; every assessment
 	// must carry that provenance so no one treats it as authoritative.

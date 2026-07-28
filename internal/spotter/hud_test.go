@@ -121,6 +121,27 @@ func TestHUDAlwaysCarriesProvenanceNotice(t *testing.T) {
 	}
 }
 
+// The HUD speaks its lines aloud, so the grammar has to be right.
+func TestHUDPluralizesCorrectly(t *testing.T) {
+	single := ToHUD(Assess(namedDevice(t, "Dahua", ExposureLAN), knowledge.DeviceAdvisories()), true)
+	if single.Concerns != 1 {
+		t.Skipf("fixture produced %d concerns, expected 1", single.Concerns)
+	}
+	for _, text := range []string{single.Line2, single.Speech} {
+		if strings.Contains(text, "1 issues") {
+			t.Errorf("bad plural in %q", text)
+		}
+		if !strings.Contains(text, "1 issue") {
+			t.Errorf("expected \"1 issue\" in %q", text)
+		}
+	}
+
+	multi := ToHUD(Assess(namedDevice(t, "Hikvision", ExposureInternet), knowledge.DeviceAdvisories()), true)
+	if multi.Concerns > 1 && !strings.Contains(multi.Line2, "issues") {
+		t.Errorf("expected plural \"issues\" for %d concerns: %q", multi.Concerns, multi.Line2)
+	}
+}
+
 func TestHUDContractIsStableJSON(t *testing.T) {
 	// The glasses client renders these fields by name; renaming one silently
 	// breaks the display, so pin the contract.

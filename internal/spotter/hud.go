@@ -157,9 +157,9 @@ func ToHUD(a Assessment, enrolled bool) HUDCard {
 			}
 		}
 		if exploited > 0 {
-			card.Line2 = fmt.Sprintf("%d issues · %d actively exploited", len(a.Concerns), exploited)
+			card.Line2 = fmt.Sprintf("%s · %d actively exploited", issueCount(len(a.Concerns)), exploited)
 		} else {
-			card.Line2 = fmt.Sprintf("%d known issues", len(a.Concerns))
+			card.Line2 = issueCount(len(a.Concerns)) + " known"
 		}
 		if len(a.Plan) > 0 {
 			card.NextAction = a.Plan[0].Do
@@ -168,10 +168,10 @@ func ToHUD(a Assessment, enrolled bool) HUDCard {
 
 		spoken := fmt.Sprintf("That is a %s %s.", id.Best.Vendor, id.Best.Family)
 		if exploited > 0 {
-			spoken += fmt.Sprintf(" %d known issues, and %s already being exploited in the wild.",
-				len(a.Concerns), pluralIs(exploited))
+			spoken += fmt.Sprintf(" %s known, and %s already being exploited in the wild.",
+				issueCount(len(a.Concerns)), pluralIs(exploited))
 		} else {
-			spoken += fmt.Sprintf(" %d known issues.", len(a.Concerns))
+			spoken += fmt.Sprintf(" %s known.", issueCount(len(a.Concerns)))
 		}
 		if card.NextAction != "" {
 			spoken += " " + strings.TrimSuffix(card.NextAction, ".") + "."
@@ -192,4 +192,13 @@ func pluralIs(n int) string {
 		return "one is"
 	}
 	return fmt.Sprintf("%d are", n)
+}
+
+// issueCount renders "1 issue" / "N issues". The HUD speaks this aloud, so the
+// grammar has to be right.
+func issueCount(n int) string {
+	if n == 1 {
+		return "1 issue"
+	}
+	return fmt.Sprintf("%d issues", n)
 }
