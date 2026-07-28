@@ -49,6 +49,15 @@ func ParseShow(data []byte) []tools.Finding {
 			continue
 		}
 		hash, _, _ := strings.Cut(line, ":")
+		hash = strings.TrimSpace(hash)
+		// hashcat --show emits `hash:plain`; a real hash token never contains
+		// whitespace or a dot-padded label. Skip hashcat's own status banner
+		// ("Session..........: hashcat", "Status...........: Exhausted"), whose
+		// colons would otherwise be misread as recovered hashes and fabricate
+		// "hash recovered" findings from noise.
+		if hash == "" || strings.ContainsAny(hash, " \t") || strings.Contains(hash, "..") {
+			continue
+		}
 		findings = append(findings, tools.Finding{
 			ID:          fmt.Sprintf("hashcat:cracked:%d", index+1),
 			Title:       "Authorized hash recovered",
