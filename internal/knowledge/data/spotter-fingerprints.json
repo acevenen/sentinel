@@ -1,0 +1,119 @@
+{
+  "dataset": "sentinel-spotter-fingerprints",
+  "status": "factual-compilation",
+  "notice": "Vendor OUI prefixes are public IEEE MA-L registry assignments. Service and banner strings are vendor-documented conventions. This corpus identifies device families, never individuals.",
+  "source": "https://standards-oui.ieee.org/ (IEEE MA-L public registry); vendor product documentation",
+  "license": "factual compilation",
+  "devices": [
+    {
+      "id": "hikvision-ip-camera",
+      "vendor": "Hikvision",
+      "family": "IP camera",
+      "category": "camera",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "44:19:b6", "bits": 6.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "4c:bd:8f", "bits": 6.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "c0:56:e3", "bits": 6.0, "class": "l2" },
+        { "kind": "http-server", "match": "contains", "value": "hikvision", "bits": 5.5, "class": "http" },
+        { "kind": "http-realm", "match": "contains", "value": "dvrnvrdvs", "bits": 5.0, "class": "http" },
+        { "kind": "upnp-model", "match": "contains", "value": "hikvision", "bits": 5.0, "class": "upnp" },
+        { "kind": "label-model", "match": "prefix", "value": "ds-", "bits": 5.5, "class": "physical" },
+        { "kind": "logo", "match": "exact", "value": "hikvision", "bits": 5.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "dahua-ip-camera",
+      "vendor": "Dahua",
+      "family": "IP camera",
+      "category": "camera",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "90:02:a9", "bits": 6.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "3c:ef:8c", "bits": 6.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "4c:11:bf", "bits": 6.0, "class": "l2" },
+        { "kind": "http-server", "match": "contains", "value": "dahua", "bits": 5.5, "class": "http" },
+        { "kind": "upnp-model", "match": "contains", "value": "dahua", "bits": 5.0, "class": "upnp" },
+        { "kind": "label-model", "match": "prefix", "value": "ipc-", "bits": 5.0, "class": "physical" },
+        { "kind": "logo", "match": "exact", "value": "dahua", "bits": 5.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "axis-ip-camera",
+      "vendor": "Axis Communications",
+      "family": "network camera",
+      "category": "camera",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "00:40:8c", "bits": 6.5, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "ac:cc:8e", "bits": 6.5, "class": "l2" },
+        { "kind": "http-server", "match": "contains", "value": "axis", "bits": 5.0, "class": "http" },
+        { "kind": "tls-cn", "match": "contains", "value": "axis", "bits": 4.5, "class": "tls" },
+        { "kind": "label-model", "match": "prefix", "value": "m30", "bits": 4.5, "class": "physical" },
+        { "kind": "logo", "match": "exact", "value": "axis", "bits": 5.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "ubiquiti-unifi-protect",
+      "vendor": "Ubiquiti",
+      "family": "UniFi Protect camera",
+      "category": "camera",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "24:a4:3c", "bits": 6.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "78:8a:20", "bits": 6.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "fc:ec:da", "bits": 6.0, "class": "l2" },
+        { "kind": "http-server", "match": "contains", "value": "ubnt", "bits": 5.0, "class": "http" },
+        { "kind": "upnp-model", "match": "contains", "value": "unifi", "bits": 5.0, "class": "upnp" },
+        { "kind": "label-model", "match": "prefix", "value": "uvc-", "bits": 5.5, "class": "physical" },
+        { "kind": "logo", "match": "exact", "value": "ubiquiti", "bits": 5.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "amazon-ring-doorbell",
+      "vendor": "Amazon",
+      "family": "Ring doorbell/camera",
+      "category": "doorbell",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "44:65:0d", "bits": 5.5, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "74:c2:46", "bits": 5.5, "class": "l2" },
+        { "kind": "upnp-model", "match": "contains", "value": "ring", "bits": 4.5, "class": "upnp" },
+        { "kind": "logo", "match": "exact", "value": "ring", "bits": 5.0, "class": "physical" },
+        { "kind": "form-factor", "match": "exact", "value": "doorbell", "bits": 3.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "google-nest-camera",
+      "vendor": "Google",
+      "family": "Nest camera",
+      "category": "camera",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "18:b4:30", "bits": 5.5, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "6c:ad:f8", "bits": 5.5, "class": "l2" },
+        { "kind": "upnp-model", "match": "contains", "value": "nest", "bits": 4.5, "class": "upnp" },
+        { "kind": "logo", "match": "exact", "value": "nest", "bits": 5.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "tplink-tapo-camera",
+      "vendor": "TP-Link",
+      "family": "Tapo/Kasa camera",
+      "category": "camera",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "50:c7:bf", "bits": 5.5, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "14:cc:20", "bits": 5.5, "class": "l2" },
+        { "kind": "http-server", "match": "contains", "value": "tp-link", "bits": 5.0, "class": "http" },
+        { "kind": "label-model", "match": "prefix", "value": "tapo", "bits": 5.5, "class": "physical" },
+        { "kind": "logo", "match": "exact", "value": "tp-link", "bits": 5.0, "class": "physical" }
+      ]
+    },
+    {
+      "id": "raspberry-pi-host",
+      "vendor": "Raspberry Pi Foundation",
+      "family": "single-board computer",
+      "category": "computer",
+      "rules": [
+        { "kind": "mac-oui", "match": "prefix", "value": "b8:27:eb", "bits": 7.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "dc:a6:32", "bits": 7.0, "class": "l2" },
+        { "kind": "mac-oui", "match": "prefix", "value": "e4:5f:01", "bits": 7.0, "class": "l2" },
+        { "kind": "form-factor", "match": "exact", "value": "sbc", "bits": 4.0, "class": "physical" }
+      ]
+    }
+  ]
+}

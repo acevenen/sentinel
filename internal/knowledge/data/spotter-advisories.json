@@ -1,0 +1,188 @@
+{
+  "dataset": "sentinel-spotter-advisories",
+  "status": "illustrative-sample",
+  "notice": "ILLUSTRATIVE SAMPLE — not a substitute for NVD. Entries reference real, publicly documented advisories, but the affected-version ranges here are deliberately coarse and are NOT authoritative. Always verify against the vendor advisory and NVD before acting on, or reporting, any finding.",
+  "source": "https://nvd.nist.gov/ (CVE/CVSS, public domain); https://www.cisa.gov/known-exploited-vulnerabilities-catalog (KEV, public domain)",
+  "license": "public domain (US Government work); compiled by Sentinel",
+  "advisories": [
+    {
+      "id": "CVE-2021-36260",
+      "title": "Command injection in Hikvision web server",
+      "vendor": "Hikvision",
+      "family": "IP camera",
+      "cwe": "CWE-78",
+      "cvss": 9.8,
+      "known_exploited": true,
+      "default_credentials": false,
+      "summary": "A crafted request to the device web server can run operating-system commands without authentication, giving full control of the camera.",
+      "affected": {
+        "introduced": "0",
+        "fixed": ""
+      },
+      "version_confidence": "coarse",
+      "remediation": [
+        {
+          "action": "Install the vendor firmware update for this model",
+          "effort": "medium",
+          "reduction": 0.95,
+          "tag": "firmware-update"
+        },
+        {
+          "action": "Remove the camera from the public internet — delete any port-forward or UPnP mapping to it",
+          "effort": "low",
+          "reduction": 0.8,
+          "tag": "remove-internet-exposure"
+        },
+        {
+          "action": "Move the camera to an isolated IoT VLAN or guest network",
+          "effort": "medium",
+          "reduction": 0.6,
+          "tag": "network-isolate"
+        }
+      ],
+      "source": "https://nvd.nist.gov/vuln/detail/CVE-2021-36260"
+    },
+    {
+      "id": "CVE-2017-7921",
+      "title": "Authentication bypass in Hikvision cameras",
+      "vendor": "Hikvision",
+      "family": "IP camera",
+      "cwe": "CWE-287",
+      "cvss": 10.0,
+      "known_exploited": true,
+      "default_credentials": false,
+      "summary": "An improper authentication path allows escalation to administrator and disclosure of device credentials.",
+      "affected": {
+        "introduced": "0",
+        "fixed": ""
+      },
+      "version_confidence": "coarse",
+      "remediation": [
+        {
+          "action": "Install the vendor firmware update for this model",
+          "effort": "medium",
+          "reduction": 0.95,
+          "tag": "firmware-update"
+        },
+        {
+          "action": "Rotate every device and stream password after updating",
+          "effort": "low",
+          "reduction": 0.5,
+          "tag": "rotate-credentials"
+        },
+        {
+          "action": "Remove the camera from the public internet",
+          "effort": "low",
+          "reduction": 0.8,
+          "tag": "remove-internet-exposure"
+        }
+      ],
+      "source": "https://nvd.nist.gov/vuln/detail/CVE-2017-7921"
+    },
+    {
+      "id": "CVE-2021-33044",
+      "title": "Identity authentication bypass in Dahua devices",
+      "vendor": "Dahua",
+      "family": "IP camera",
+      "cwe": "CWE-287",
+      "cvss": 9.8,
+      "known_exploited": true,
+      "default_credentials": false,
+      "summary": "The login process can be bypassed, allowing a remote party to authenticate as a valid device user.",
+      "affected": {
+        "introduced": "0",
+        "fixed": ""
+      },
+      "version_confidence": "coarse",
+      "remediation": [
+        {
+          "action": "Install the vendor firmware update for this model",
+          "effort": "medium",
+          "reduction": 0.95,
+          "tag": "firmware-update"
+        },
+        {
+          "action": "Remove the camera from the public internet",
+          "effort": "low",
+          "reduction": 0.8,
+          "tag": "remove-internet-exposure"
+        },
+        {
+          "action": "Move the camera to an isolated IoT VLAN or guest network",
+          "effort": "medium",
+          "reduction": 0.6,
+          "tag": "network-isolate"
+        }
+      ],
+      "source": "https://nvd.nist.gov/vuln/detail/CVE-2021-33044"
+    },
+    {
+      "id": "SENTINEL-HYGIENE-DEFAULT-CREDS",
+      "title": "Device may still use factory default credentials",
+      "vendor": "*",
+      "family": "*",
+      "cwe": "CWE-1392",
+      "cvss": 8.0,
+      "known_exploited": false,
+      "default_credentials": true,
+      "summary": "Many consumer devices ship with a published default username and password. Anyone who can reach the device can look these up.",
+      "affected": {
+        "introduced": "0",
+        "fixed": ""
+      },
+      "version_confidence": "not-version-specific",
+      "remediation": [
+        {
+          "action": "Set a unique password on the device now",
+          "effort": "low",
+          "reduction": 0.9,
+          "tag": "set-unique-password"
+        },
+        {
+          "action": "Disable any remote-access account you do not use",
+          "effort": "low",
+          "reduction": 0.4,
+          "tag": "disable-unused-accounts"
+        }
+      ],
+      "source": "https://cwe.mitre.org/data/definitions/1392.html"
+    },
+    {
+      "id": "SENTINEL-HYGIENE-INTERNET-EXPOSED",
+      "title": "Device is reachable from the public internet",
+      "vendor": "*",
+      "family": "*",
+      "cwe": "CWE-668",
+      "cvss": 7.0,
+      "known_exploited": false,
+      "default_credentials": false,
+      "summary": "A device reachable from outside your network is exposed to automated internet-wide scanning, which finds and attacks new devices within minutes.",
+      "affected": {
+        "introduced": "0",
+        "fixed": ""
+      },
+      "version_confidence": "not-version-specific",
+      "remediation": [
+        {
+          "action": "Delete the port-forward rule for this device on your router",
+          "effort": "low",
+          "reduction": 0.9,
+          "tag": "remove-internet-exposure"
+        },
+        {
+          "action": "Turn off UPnP on your router so devices cannot open their own ports",
+          "effort": "low",
+          "reduction": 0.7,
+          "tag": "disable-upnp"
+        },
+        {
+          "action": "Use the vendor app or a VPN for remote viewing instead of a port-forward",
+          "effort": "medium",
+          "reduction": 0.85,
+          "tag": "use-vpn-not-portforward"
+        }
+      ],
+      "source": "https://cwe.mitre.org/data/definitions/668.html"
+    }
+  ]
+}

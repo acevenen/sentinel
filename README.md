@@ -58,13 +58,28 @@ ignored `knowledge-data/`.
 
 | Area | Commands |
 |---|---|
-| Defense | `scan`, `guard`, `evaluate`, `serve` |
+| Defense | `scan`, `guard`, `evaluate`, `serve`, `spot` |
 | Authorized web/API | `hunt`, `recon`, `traffic`, `test` |
 | High guardrail | `exploit`, `creds`, `wireless`, `se` |
 | AI security | `ai-redteam`, `orchestrate` |
 | Operations | `engagement`, `ctf`, `bounty`, `tools doctor` |
 
 See the [command reference](docs/COMMANDS.md) for flags and examples.
+
+## Device intelligence (Spotter)
+
+Look at a device you own; learn what it is, how exposed it is, and what to do
+about it. Identity is fused from what you can see and what the network already
+tells you, so no single sensor can produce a confident answer, and risk is
+scored by real reachability rather than raw CVSS.
+
+```sh
+sentinel spot --observe logo=hikvision --observe mac-oui=44:19:B6:11:22:33 \
+    --observe http-server=Hikvision-Webs --exposure internet
+```
+
+Runs entirely offline against embedded corpora. `--format hud` emits the
+contract a Meta Ray-Ban Display client renders. See [Spotter](docs/SPOTTER.md).
 
 ## Quick local dry-run
 
@@ -141,6 +156,7 @@ target. See [Labs, CTFs, and bounty operation](docs/LABS.md).
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Safety](docs/SAFETY.md)
+- [Device intelligence (Spotter)](docs/SPOTTER.md)
 - [Command reference](docs/COMMANDS.md)
 - [Methodology](docs/METHODOLOGY.md)
 - [Tool adapters](docs/TOOLS.md)
