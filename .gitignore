@@ -1,6 +1,6 @@
-# Binaries
-sentinel
-sentinel.exe
+# Binaries (anchored to repo root so they don't match nested Sentinel/ dirs)
+/sentinel
+/sentinel.exe
 dist/
 
 # Test and coverage artifacts
@@ -47,3 +47,6 @@ set-output/
 
 # Fetched knowledge datasets are reproducible and may be very large
 knowledge-data/
+
+# Private bounty pipeline — local/private only, never push to the public repo
+/meta-bounty/
