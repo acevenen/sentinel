@@ -1,0 +1,14 @@
+# Compiled binary
+/reverso
+
+# Project workspaces created by `reverso scope init` — they hold private keys,
+# the evidence database, ingested artifact blobs, and the audit trail. Never
+# commit them.
+.reverso/
+
+# Coverage output
+coverage.out
+
+# Editor and OS noise
+*.swp
+.DS_Store

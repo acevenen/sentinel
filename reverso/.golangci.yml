@@ -1,0 +1,22 @@
+version: "2"
+
+linters:
+  enable:
+    - misspell
+    - unconvert
+    - unparam
+  settings:
+    misspell:
+      locale: US
+    errcheck:
+      # CLI report renderers write to stdout or an in-memory buffer; a failed
+      # Fprint there is not actionable. File-close and audit errors ARE checked.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+
+formatters:
+  enable:
+    - gofmt
+    - goimports

@@ -1,0 +1,37 @@
+# Example REVerso authorization manifest.
+#
+# Generate a real, signed manifest with `reverso scope init`; this file
+# documents the schema. The `signature` field is filled in by signing with the
+# project owner key (the trust anchor). REVerso fails closed: it will not
+# analyze anything unless a manifest verifies and has not expired, and it will
+# never grant a permanently prohibited capability no matter what a manifest says.
+authorization:
+  project_id: demo-ecu-teardown
+  owner: researcher@example.test
+  target:
+    asset_id: ecu-lab-01
+    # One of: detached_lab_hardware | firmware_image | passive_capture | simulator
+    # There is deliberately no value for an operational or public-road system.
+    asset_type: firmware_image
+    ownership_evidence: "Purchased unit; receipt and serial on file. Bench-only."
+  permitted:
+    - artifact_ingestion
+    - passive_capture_analysis
+    - firmware_metadata_analysis
+    - protocol_inference
+    - trust_mapping
+    - simulation
+    - report_generation
+  # Optional project-specific prohibitions layered on top of the permanent
+  # deny-list. The permanent deny-list (production_key_extraction,
+  # secure_boot_bypass, gateway_auth_bypass, safety_command_injection,
+  # active_vehicle_bus_transmission, public_road_operation, and the rest) is
+  # always enforced and cannot be waived here.
+  prohibited:
+    - production_key_extraction
+    - secure_boot_bypass
+    - active_vehicle_bus_transmission
+    - safety_domain_testing
+    - public_road_testing
+  expires_at: "2026-12-31T00:00:00Z"
+  signature: "ed25519:<base64 public key>:<base64 signature>"
