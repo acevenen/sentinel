@@ -192,10 +192,19 @@ func (m *Manifest) Prohibits(c Capability) bool {
 }
 
 // canonicalBytes returns the deterministic byte string that is signed and
-// verified. The signature field is cleared so signing is self-consistent.
+// verified. The signature field is cleared so signing is self-consistent, and
+// the capability slices are normalized so a nil slice and an empty slice (which
+// a YAML round-trip can interconvert) produce identical bytes — otherwise a
+// legitimately signed manifest could fail verification after being reloaded.
 func (a Authorization) canonicalBytes() ([]byte, error) {
 	clone := a
 	clone.Signature = ""
+	if clone.Permitted == nil {
+		clone.Permitted = []Capability{}
+	}
+	if clone.Prohibited == nil {
+		clone.Prohibited = []Capability{}
+	}
 	data, err := json.Marshal(clone)
 	if err != nil {
 		return nil, fmt.Errorf("encoding canonical manifest: %w", err)

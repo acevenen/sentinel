@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -114,6 +115,20 @@ func TestEncryptedBlobWrongKeyFails(t *testing.T) {
 	b2, _ := NewEncryptedBlobStore(root, wrong)
 	if _, err := b2.Get(id); err == nil {
 		t.Fatal("Get with the wrong key should fail")
+	}
+}
+
+// Get and Exists must reject ids that are not a hex SHA-256, so a "../" id can
+// never coerce a path outside the store or crash the path builder.
+func TestBlobRejectsInvalidID(t *testing.T) {
+	b := NewBlobStore(t.TempDir())
+	for _, bad := range []string{"", "x", "../../etc/passwd", "GG" + strings.Repeat("a", 62)} {
+		if _, err := b.Get(bad); !errors.Is(err, ErrInvalidBlobID) {
+			t.Fatalf("Get(%q) error = %v, want ErrInvalidBlobID", bad, err)
+		}
+		if b.Exists(bad) {
+			t.Fatalf("Exists(%q) = true, want false", bad)
+		}
 	}
 }
 

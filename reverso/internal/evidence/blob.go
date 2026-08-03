@@ -23,6 +23,26 @@ type BlobStore struct {
 // matches, which should be impossible without tampering.
 var ErrBlobExistsDiffers = errors.New("existing blob content does not match its id")
 
+// ErrInvalidBlobID means an id was not a 64-character lowercase hex SHA-256.
+var ErrInvalidBlobID = errors.New("blob id must be a 64-character lowercase hex sha256")
+
+// validBlobID enforces that ids are exactly a hex SHA-256, so a caller can
+// never coerce a path outside the store (e.g. via "..") or crash pathFor.
+func validBlobID(id string) bool {
+	if len(id) != 64 {
+		return false
+	}
+	for i := 0; i < len(id); i++ {
+		c := id[i]
+		isDigit := c >= '0' && c <= '9'
+		isHexLower := c >= 'a' && c <= 'f'
+		if !isDigit && !isHexLower {
+			return false
+		}
+	}
+	return true
+}
+
 // NewBlobStore returns a plaintext blob store rooted at root.
 func NewBlobStore(root string) *BlobStore {
 	return &BlobStore{Root: root}
@@ -50,8 +70,8 @@ func (b *BlobStore) pathFor(id string) string {
 // content twice is a no-op. It returns the on-disk path. The caller supplies id
 // (the verified SHA-256 of the plaintext) so Put never trusts unverified bytes.
 func (b *BlobStore) Put(id string, data []byte) (string, error) {
-	if len(id) != 64 {
-		return "", fmt.Errorf("blob id must be a 64-char sha256, got %d chars", len(id))
+	if !validBlobID(id) {
+		return "", ErrInvalidBlobID
 	}
 	sum := sha256.Sum256(data)
 	if hex.EncodeToString(sum[:]) != id {
@@ -107,6 +127,9 @@ func (b *BlobStore) Put(id string, data []byte) (string, error) {
 // Get returns the plaintext bytes for id, decrypting if needed, and verifies
 // the content still hashes to id. A mismatch is reported as tampering.
 func (b *BlobStore) Get(id string) ([]byte, error) {
+	if !validBlobID(id) {
+		return nil, ErrInvalidBlobID
+	}
 	raw, err := os.ReadFile(b.pathFor(id))
 	if err != nil {
 		return nil, fmt.Errorf("reading blob %s: %w", id, err)
@@ -125,8 +148,11 @@ func (b *BlobStore) Get(id string) ([]byte, error) {
 	return data, nil
 }
 
-// Exists reports whether a blob is present.
+// Exists reports whether a blob is present. An invalid id is never present.
 func (b *BlobStore) Exists(id string) bool {
+	if !validBlobID(id) {
+		return false
+	}
 	_, err := os.Stat(b.pathFor(id))
 	return err == nil
 }

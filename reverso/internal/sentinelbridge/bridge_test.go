@@ -128,6 +128,49 @@ func TestBridgeDeniesPermanentlyProhibited(t *testing.T) {
 	}
 }
 
+// Regression: a guarded capability must not take the read-only shortcut even
+// when StateChanging is left at its false zero value. Without a confirmer it
+// must be denied, and the confirmer must actually be consulted when present.
+func TestBridgeGuardedActionNeedsConfirmationEvenIfNotStateChanging(t *testing.T) {
+	audit, pub, path := newAudit(t)
+	// No confirmer: a guarded emit with StateChanging=false must be denied.
+	b := New(simulatorPolicy(t), nil, audit, "op")
+	v, err := b.Submit(context.Background(), ProposedAction{
+		Capability: scope.CapSimulatorMessageEmit, AssetType: scope.AssetSimulator,
+		Target: "sim-01", LabOnly: true, StateChanging: false, // zero value
+	})
+	if err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	if v.Approved {
+		t.Fatal("guarded emit auto-approved as read-only without confirmation")
+	}
+
+	// With a confirmer: it must be consulted, then approved.
+	called := false
+	confirm := func(context.Context, ProposedAction, RiskLevel) (bool, string, string, error) {
+		called = true
+		return true, "reviewer", "ok", nil
+	}
+	b2 := New(simulatorPolicy(t), confirm, audit, "op")
+	v2, err := b2.Submit(context.Background(), ProposedAction{
+		Capability: scope.CapSimulatorMessageEmit, AssetType: scope.AssetSimulator,
+		Target: "sim-01", LabOnly: true, StateChanging: false,
+	})
+	if err != nil {
+		t.Fatalf("Submit: %v", err)
+	}
+	if !called {
+		t.Fatal("confirmer was not consulted for a guarded action")
+	}
+	if !v2.Approved || v2.Reviewer == "policy" {
+		t.Fatalf("expected human-reviewed approval, got %+v", v2)
+	}
+	if err := evidence.OpenAuditLog(path).Verify(pub); err != nil {
+		t.Fatalf("audit Verify: %v", err)
+	}
+}
+
 func TestBridgeRequiresAudit(t *testing.T) {
 	b := New(simulatorPolicy(t), nil, nil, "op")
 	if _, err := b.Submit(context.Background(), ProposedAction{Capability: scope.CapSimulation, Target: "x"}); err == nil {

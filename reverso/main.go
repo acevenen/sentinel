@@ -44,6 +44,8 @@ func isPolicyRefusal(err error) bool {
 		scope.ErrPermanentlyProhibited,
 		scope.ErrProhibitedByManifest,
 		scope.ErrNotPermitted,
+		scope.ErrUnknownAction,
+		scope.ErrEmptyTarget,
 		scope.ErrAssetTypeMismatch,
 		scope.ErrApprovalRequired,
 		scope.ErrLabOnlyRequired,

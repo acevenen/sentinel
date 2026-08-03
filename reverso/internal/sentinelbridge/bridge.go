@@ -131,8 +131,13 @@ func (b *Bridge) Submit(ctx context.Context, a ProposedAction) (Verdict, error) 
 		}
 		return v, nil
 	}
-	if !a.StateChanging {
-		// A non-state-changing action that passed policy needs no confirmation.
+	if !a.StateChanging && !scope.IsGuarded(a.Capability) {
+		// A non-state-changing, non-guarded action that passed policy needs no
+		// confirmation. Guarded capabilities are excluded even when the caller
+		// left StateChanging at its false zero value: the policy requires
+		// approval for a guarded capability regardless of StateChanging (see
+		// scope.Policy.Authorize), so the read-only shortcut must never apply to
+		// one, or the only bus-like emission path would lose its approval guard.
 		v := Verdict{Approved: true, Reason: "authorized (read-only)", Risk: risk, Reviewer: "policy"}
 		if aerr := record(v); aerr != nil {
 			return Verdict{}, aerr

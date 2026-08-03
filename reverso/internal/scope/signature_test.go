@@ -80,6 +80,34 @@ func TestVerifyRejectsMalformed(t *testing.T) {
 	}
 }
 
+// A manifest signed with nil capability slices must still verify after a YAML
+// round-trip turns them into empty slices (canonical normalization).
+func TestSignVerifySurvivesNilVsEmptySlices(t *testing.T) {
+	kp, _ := GenerateKeypair()
+	m := &Manifest{Authorization: Authorization{
+		ProjectID: "p", Owner: "o@example.test",
+		Target:    Target{AssetID: "a", AssetType: AssetFirmwareImage, OwnershipEvidence: "receipt"},
+		Permitted: []Capability{CapFirmwareMetadataAnalysis},
+		// Prohibited deliberately left nil.
+		ExpiresAt: time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+	}}
+	if err := m.Sign(kp.Private); err != nil {
+		t.Fatalf("Sign: %v", err)
+	}
+	// Round-trip through YAML, which materializes nil slices as empty.
+	data, err := m.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	reloaded, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse: %v", err)
+	}
+	if err := reloaded.VerifySignature([]ed25519.PublicKey{kp.Public}); err != nil {
+		t.Fatalf("VerifySignature after round-trip: %v", err)
+	}
+}
+
 func TestPublicKeyRoundTrip(t *testing.T) {
 	kp, _ := GenerateKeypair()
 	enc := EncodePublicKey(kp.Public)

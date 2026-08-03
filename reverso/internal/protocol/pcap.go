@@ -72,13 +72,16 @@ func SummarizePCAP(data []byte) (Summary, error) {
 		s.ByteOrder = "little"
 	}
 
-	off := 24
-	for off+16 <= len(data) {
+	// int64 arithmetic keeps offset math correct even where int is 32-bit and a
+	// crafted 32-bit inclLen would otherwise overflow the bounds check.
+	off := int64(24)
+	total := int64(len(data))
+	for off+16 <= total {
 		tsSec := bo.Uint32(data[off : off+4])
 		tsFrac := bo.Uint32(data[off+4 : off+8])
-		inclLen := bo.Uint32(data[off+8 : off+12])
+		inclLen := int64(bo.Uint32(data[off+8 : off+12]))
 		off += 16
-		if off+int(inclLen) > len(data) {
+		if off+inclLen > total {
 			return s, fmt.Errorf("%w: packet %d claims %d bytes", ErrTruncated, s.Packets+1, inclLen)
 		}
 		var frac int64
@@ -94,7 +97,7 @@ func SummarizePCAP(data []byte) (Summary, error) {
 		s.LastTime = ts
 		s.TotalBytes += uint64(inclLen)
 		s.Packets++
-		off += int(inclLen)
+		off += inclLen
 	}
 	if !s.FirstTime.IsZero() {
 		s.Duration = s.LastTime.Sub(s.FirstTime)

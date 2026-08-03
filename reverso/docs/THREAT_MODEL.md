@@ -64,15 +64,25 @@ explicit approval.
 ### T3 — Tampering with the evidence store or audit trail
 *Threat:* an attacker edits an artifact, a finding, or the audit log to hide or
 fabricate activity.
-*Mitigations:* artifact blobs are content-addressed and stored read-only;
-reads re-hash and compare (`evidence/blob.go`). The audit log is a hash-chained
-JSONL where each record is Ed25519-signed; editing, reordering, deleting, or
-re-signing with another key breaks `Verify` (`evidence/audit.go`, tamper tests).
-The SQLite `artifacts` table is write-once and refuses conflicting inserts.
-*Residual risk:* the audit public key is stored in the workspace; an attacker
-who rewrites both the log and that key could produce a self-consistent forgery.
-The design mitigates by **advising the operator to pin the audit public key
-externally** (printed at `scope init`); full external anchoring is future work.
+*Mitigations:* artifact blobs are content-addressed and stored read-only, and
+`Get`/`Exists` reject non-hex ids and re-hash on read (`evidence/blob.go`). The
+audit log is a hash-chained JSONL where each record is Ed25519-signed; editing,
+reordering, deleting a non-trailing record, or re-signing with another key
+breaks `Verify` (`evidence/audit.go`, tamper tests). The SQLite `artifacts`
+table is write-once and refuses conflicting inserts.
+*Trailing truncation:* any prefix of a valid hash chain is itself valid, so
+deleting the newest record(s) — or wiping the log — cannot be caught from the
+file alone. REVerso mitigates this with an **external anchor**: `reverso audit
+verify --save-anchor` records the head (count + head hash) for the operator to
+store off-box, and `--anchor` later fails if the log was truncated below that
+point (`evidence.CheckAnchor`, tests). Without an anchor, `audit verify` prints
+an explicit warning.
+*Residual risk:* the audit public key defaults to a copy in the workspace; an
+attacker who rewrites both the log and that key could produce a self-consistent
+forgery. Supply an externally-pinned key via `REVERSO_AUDIT_PUBKEY` or
+`--audit-pubkey` (printed at `scope init`) to close this. The manifest owner
+trust anchor (`owner.pub`) has the same local-trust property; external pinning
+of it is a tracked follow-up.
 
 ### T4 — Malicious artifact exploiting a parser
 *Threat:* crafted firmware/PCAP/ELF triggers a crash, resource exhaustion, or
@@ -132,9 +142,15 @@ defaults.
 
 ## 6. Known residual risks (tracked)
 
-1. Audit public-key anchoring is local by default (T3).
-2. Parser sandboxing/containerization is not yet enforced by the tool (T4).
-3. Redaction-before-remote-LLM is specified but must be implemented before any
+1. The audit public key and the manifest owner trust anchor default to copies in
+   the workspace; external pinning is supported for the audit key
+   (`REVERSO_AUDIT_PUBKEY`) and is a follow-up for the owner key (T3).
+2. Trailing truncation is only detected when the operator saves and later checks
+   an external anchor; unanchored, it cannot be caught from the log alone (T3).
+3. Parser sandboxing/containerization is not yet enforced by the tool; analysis
+   reads are size- and match-capped but not yet run inside a resource-limited
+   container (T4).
+4. Redaction-before-remote-LLM is specified but must be implemented before any
    remote model path is enabled (T5).
-4. At-rest encryption covers artifact blobs; the SQLite metadata DB is not yet
+5. At-rest encryption covers artifact blobs; the SQLite metadata DB is not yet
    encrypted.

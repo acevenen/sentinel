@@ -145,8 +145,18 @@ func shannonEntropy(data []byte) float64 {
 	return entropy
 }
 
+// maxStrings bounds how many printable-string matches are collected, so a
+// crafted or very large image cannot amplify memory use without limit. Matching
+// runs on the raw bytes to avoid copying the whole image into a string.
+const maxStrings = 200000
+
 func extractStrings(data []byte) []string {
-	return stringRe.FindAllString(string(data), -1)
+	matches := stringRe.FindAll(data, maxStrings)
+	out := make([]string, len(matches))
+	for i, m := range matches {
+		out[i] = string(m)
+	}
+	return out
 }
 
 func topN(strs []string, n int) []string {

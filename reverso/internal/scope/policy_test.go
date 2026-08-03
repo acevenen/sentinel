@@ -286,6 +286,16 @@ func TestGuardedEmitRefusedOutsideSimulator(t *testing.T) {
 	}
 }
 
+func TestRefusesEmptyTarget(t *testing.T) {
+	m, _ := validManifest(t)
+	dec, err := New(m).Authorize(context.Background(), Action{
+		Capability: CapFirmwareMetadataAnalysis, AssetType: AssetFirmwareImage, Target: "",
+	})
+	if !errors.Is(err, ErrEmptyTarget) || dec.Allowed {
+		t.Fatalf("Authorize error = %v allowed=%v, want ErrEmptyTarget denied", err, dec.Allowed)
+	}
+}
+
 func TestAuthorizeHonorsContextCancellation(t *testing.T) {
 	m, _ := validManifest(t)
 	ctx, cancel := context.WithCancel(context.Background())

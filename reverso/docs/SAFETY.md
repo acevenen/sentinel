@@ -75,15 +75,24 @@ confirmer configured, nothing state-changing is approved.
 ## The audit trail
 
 Every decision — allowed or denied — is appended to a hash-chained,
-Ed25519-signed log. Verify it any time:
+Ed25519-signed log. The chain detects edits, reordering, and non-trailing
+deletions. Verify it any time:
 
 ```sh
 reverso audit verify
 ```
 
-Pin the **audit public key** printed at `scope init` somewhere outside the
-workspace (a password manager, a second host). That lets you detect tampering
-even if the local workspace key is also rewritten.
+Two external anchors make it stronger, because both defend against an attacker
+who can also rewrite the workspace:
+
+- **Pin the audit public key.** Save the key printed at `scope init` off-box and
+  pass it back with `REVERSO_AUDIT_PUBKEY` (or `--audit-pubkey`) so a full
+  re-sign forgery is detected.
+- **Anchor the head to catch trailing truncation.** Any prefix of a hash chain
+  is itself valid, so deleting the newest records can't be caught from the log
+  alone. Periodically run `reverso audit verify --save-anchor anchor.json`,
+  store `anchor.json` off-box, and later verify with
+  `reverso audit verify --anchor anchor.json`.
 
 ## Data handling
 

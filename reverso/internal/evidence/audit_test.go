@@ -113,6 +113,76 @@ func TestAuditRejectsWrongKey(t *testing.T) {
 	}
 }
 
+// A hash chain cannot detect trailing truncation from the file alone: deleting
+// the newest record leaves a valid prefix. This documents that limitation.
+func TestAuditTailTruncationPassesPlainVerify(t *testing.T) {
+	pub, priv := newAuditKey(t)
+	path := filepath.Join(t.TempDir(), "audit.log")
+	log := NewAuditLog(path, priv)
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		if err := log.Record(ctx, Event{Actor: "op", Capability: "x", Target: "t", Decision: "allowed"}); err != nil {
+			t.Fatalf("Record: %v", err)
+		}
+	}
+	raw, _ := os.ReadFile(path)
+	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
+	// Drop the last record.
+	if err := os.WriteFile(path, []byte(strings.Join(lines[:2], "\n")+"\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	// Plain Verify still passes — this is the documented limitation.
+	if err := OpenAuditLog(path).Verify(pub); err != nil {
+		t.Fatalf("plain Verify unexpectedly failed: %v", err)
+	}
+}
+
+// An external anchor detects trailing truncation.
+func TestAuditAnchorDetectsTailTruncation(t *testing.T) {
+	pub, priv := newAuditKey(t)
+	path := filepath.Join(t.TempDir(), "audit.log")
+	log := NewAuditLog(path, priv)
+	ctx := context.Background()
+	for i := 0; i < 3; i++ {
+		if err := log.Record(ctx, Event{Actor: "op", Capability: "x", Target: "t", Decision: "allowed"}); err != nil {
+			t.Fatalf("Record: %v", err)
+		}
+	}
+	anchor, err := OpenAuditLog(path).VerifiedHead(pub)
+	if err != nil {
+		t.Fatalf("VerifiedHead: %v", err)
+	}
+	if anchor.Count != 3 || anchor.HeadHash == "" {
+		t.Fatalf("unexpected head: %+v", anchor)
+	}
+	// Truncate the last record and check against the anchor.
+	raw, _ := os.ReadFile(path)
+	lines := strings.Split(strings.TrimRight(string(raw), "\n"), "\n")
+	if err := os.WriteFile(path, []byte(strings.Join(lines[:2], "\n")+"\n"), 0o600); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := OpenAuditLog(path).CheckAnchor(pub, anchor); err == nil {
+		t.Fatal("CheckAnchor accepted a trailing-truncated log")
+	}
+}
+
+// A full wipe is detected by the anchor (count drops below the anchored count).
+func TestAuditAnchorDetectsFullWipe(t *testing.T) {
+	pub, priv := newAuditKey(t)
+	path := filepath.Join(t.TempDir(), "audit.log")
+	log := NewAuditLog(path, priv)
+	if err := log.Record(context.Background(), Event{Actor: "op", Capability: "x", Target: "t", Decision: "allowed"}); err != nil {
+		t.Fatalf("Record: %v", err)
+	}
+	anchor, _ := OpenAuditLog(path).VerifiedHead(pub)
+	if err := os.Remove(path); err != nil {
+		t.Fatalf("Remove: %v", err)
+	}
+	if err := OpenAuditLog(path).CheckAnchor(pub, anchor); err == nil {
+		t.Fatal("CheckAnchor accepted a fully wiped log")
+	}
+}
+
 func TestAuditRecordRequiresSigner(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "audit.log")
 	if err := OpenAuditLog(path).Record(context.Background(), Event{Capability: "x", Target: "t"}); err == nil {

@@ -59,12 +59,12 @@ var (
 	ErrNoObservation = errors.New("finding must cite at least one observation")
 	ErrNoEvidence    = errors.New("finding must cite at least one evidence id")
 	ErrBadConfidence = errors.New("finding has an invalid confidence level")
-	ErrInferNoObs    = errors.New("finding draws an inference with no observation to support it")
 )
 
-// Validate enforces the confidence model. In particular an inference is never
-// allowed without a supporting observation: that is the core evidence/inference
-// distinction the tests pin.
+// Validate enforces the confidence model. It requires at least one observation,
+// which is what keeps the evidence/inference distinction meaningful: an
+// inference can never stand without a directly-evidenced observation to support
+// it, because a finding with no observation is rejected outright.
 func (f Finding) Validate() error {
 	if strings.TrimSpace(f.ID) == "" {
 		return ErrNoID
@@ -77,9 +77,6 @@ func (f Finding) Validate() error {
 	}
 	if !ValidLevel(f.Confidence) {
 		return fmt.Errorf("%w: %q", ErrBadConfidence, f.Confidence)
-	}
-	if len(nonEmpty(f.Inference)) > 0 && len(nonEmpty(f.Observation)) == 0 {
-		return ErrInferNoObs
 	}
 	return nil
 }

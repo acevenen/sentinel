@@ -115,32 +115,38 @@ func (p Policy) Authorize(ctx context.Context, action Action) (Decision, error) 
 		return deny(fmt.Errorf("%w: %s", ErrUnknownAction, action.Capability))
 	}
 
-	// 3. Authorization must exist.
+	// 3. Every action must name a concrete target. An empty target is
+	// ambiguous, and ambiguity fails closed.
+	if strings.TrimSpace(action.Target) == "" {
+		return deny(ErrEmptyTarget)
+	}
+
+	// 4. Authorization must exist.
 	if p.Manifest == nil {
 		return deny(ErrNoAuthorization)
 	}
 
-	// 4. Signature enforcement, if enabled.
+	// 5. Signature enforcement, if enabled.
 	if p.RequireSignature && !p.Manifest.Verified {
 		return deny(ErrUnverified)
 	}
 
-	// 5. Expiry. An unparseable expiry counts as expired (see Manifest.Expired).
+	// 6. Expiry. An unparseable expiry counts as expired (see Manifest.Expired).
 	if p.Manifest.Expired(p.now()) {
 		return deny(ErrScopeExpired)
 	}
 
-	// 6. Manifest-level prohibition wins over any grant.
+	// 7. Manifest-level prohibition wins over any grant.
 	if p.Manifest.Prohibits(action.Capability) {
 		return deny(fmt.Errorf("%w: %s", ErrProhibitedByManifest, action.Capability))
 	}
 
-	// 7. The capability must be explicitly granted.
+	// 8. The capability must be explicitly granted.
 	if !p.Manifest.Permits(action.Capability) {
 		return deny(fmt.Errorf("%w: %s", ErrNotPermitted, action.Capability))
 	}
 
-	// 8. The action must target the asset type the manifest authorizes. An
+	// 9. The action must target the asset type the manifest authorizes. An
 	// empty action asset type inherits the manifest's, so passive analysis need
 	// not restate it; a mismatch is a refusal.
 	if action.AssetType != "" && action.AssetType != p.Manifest.Authorization.Target.AssetType {
@@ -148,7 +154,7 @@ func (p Policy) Authorize(ctx context.Context, action Action) (Decision, error) 
 			ErrAssetTypeMismatch, action.AssetType, p.Manifest.Authorization.Target.AssetType))
 	}
 
-	// 9. Guarded capabilities carry extra, non-waivable requirements.
+	// 10. Guarded capabilities carry extra, non-waivable requirements.
 	if IsGuarded(action.Capability) {
 		if p.Manifest.Authorization.Target.AssetType != AssetSimulator {
 			return deny(ErrSimulatorRequired)
@@ -161,7 +167,7 @@ func (p Policy) Authorize(ctx context.Context, action Action) (Decision, error) 
 		}
 	}
 
-	// 10. Any state-changing action requires explicit human approval.
+	// 11. Any state-changing action requires explicit human approval.
 	if action.StateChanging && !action.Approved {
 		return deny(ErrApprovalRequired)
 	}
