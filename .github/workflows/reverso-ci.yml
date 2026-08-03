@@ -1,0 +1,64 @@
+name: REVerso CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "reverso/**"
+      - ".github/workflows/reverso-ci.yml"
+  pull_request:
+    paths:
+      - "reverso/**"
+      - ".github/workflows/reverso-ci.yml"
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: reverso
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          # Pin to the Go line golangci-lint v2.1.6 is built against, matching
+          # the root Sentinel CI. Test and Build stay on `stable`.
+          go-version: "1.24"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.1.6
+          working-directory: reverso
+      - name: Go vet
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Run tests with race detector
+        run: go test ./... -race -coverprofile=coverage.out -covermode=atomic
+      - name: Coverage summary
+        run: go tool cover -func=coverage.out | tail -1
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Build
+        run: go build -trimpath -o reverso .
+      - name: Smoke test
+        run: ./reverso version
